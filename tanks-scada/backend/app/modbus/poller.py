@@ -1,0 +1,78 @@
+import asyncio
+import logging
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+from ..core.config import settings
+from ..core.database import get_db
+from ..services.calculator import calculate_percentage, calculate_volume, calculate_weight
+from .client import modbus_client
+
+logger = logging.getLogger(__name__)
+
+# Estado en memoria de los 13 tanques — compartido con routers y WebSocket
+tank_states: Dict[int, Dict[str, Any]] = {}
+
+# Referencia al WebSocketManager; se asigna desde main.py tras crear la app
+ws_manager: Optional[Any] = None
+
+
+async def poll_loop() -> None:
+    """Tarea asyncio principal: lee Modbus cada `polling_interval` segundos."""
+    from ..services.alarm_service import check_alarms
+
+    while True:
+        try:
+            await _poll_once()
+        except Exception as exc:
+            logger.error("Error en poll_loop: %s", exc)
+        await asyncio.sleep(settings.polling_interval)
+
+
+async def _poll_once() -> None:
+    from ..services.alarm_service import check_alarms
+
+    db = get_db()
+    configs = await db.tanks_config.find().to_list(length=None)
+
+    for cfg in configs:
+        tank_id: int = cfg["tank_id"]
+        modbus_cfg = cfg["modbus"]
+
+        height = await modbus_client.read_float32(modbus_cfg["height_register"]) or 0.0
+        # alarm_height en config tiene prioridad sobre el registro Modbus del PLC
+        if cfg.get("alarm_height") is not None:
+            overflow_limit = float(cfg["alarm_height"])
+        else:
+            overflow_limit = await modbus_client.read_float32(modbus_cfg["overflow_register"])
+            if overflow_limit is None:
+                overflow_limit = cfg["max_height"]
+        switch_active = await modbus_client.read_bool(modbus_cfg["switch_register"]) or False
+
+        height = max(0.0, height)
+        volume = calculate_volume(cfg["diameter"], height)
+        weight = calculate_weight(volume, cfg["density"])
+        percentage = calculate_percentage(height, cfg["max_height"])
+        alarm = (height > overflow_limit) or switch_active
+
+        tank_states[tank_id] = {
+            "tank_id": tank_id,
+            "name": cfg.get("name", f"TK{tank_id}"),
+            "product": cfg.get("product", ""),
+            "height": round(height, 3),
+            "percentage": round(percentage, 1),
+            "volume": round(volume, 1),
+            "weight": round(weight, 1),
+            "overflow_limit": round(overflow_limit, 3),
+            "switch_active": switch_active,
+            "alarm": alarm,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        await check_alarms(tank_id, height, overflow_limit, switch_active, db)
+
+    if ws_manager and tank_states:
+        await ws_manager.broadcast({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "tanks": list(tank_states.values()),
+        })
