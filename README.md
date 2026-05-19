@@ -1,149 +1,186 @@
-```python
-readme_content = """# Web-SCADA para Monitoreo de Tanques Industriales
+# Web-SCADA — Monitoreo de Tanques Industriales
 
-Este proyecto es una aplicación web tipo SCADA diseñada para el monitoreo en tiempo real de **13 tanques cilíndricos de gran capacidad**. El sistema adquiere datos de un PLC a través del protocolo **Modbus TCP**, procesa las variables de ingeniería, almacena históricos en **MongoDB**, y expone una API robusta y asíncrona mediante **FastAPI**, todo empaquetado y listo para desplegarse con **Docker**.
+Sistema de monitoreo en tiempo real para **13 tanques cilíndricos** mediante Modbus TCP. Adquiere datos del PLC, calcula variables de ingeniería, registra históricos en MongoDB y expone una interfaz web reactiva.
 
-## 🚀 Características Principales
-
-1. **Monitoreo en Tiempo Real (Modbus TCP):** Adquisición continua de variables críticas de 13 tanques desde el PLC de manera asíncrona.
-2. **Dirección IP del PLC Dinámica:** Configuración de la IP y puerto del PLC directamente desde la interfaz web, sin necesidad de reiniciar contenedores ni modificar variables de entorno.
-3. **Datalogger Automático:** Registro de variables de nivel, porcentaje, peso, volumen y estado del suiche de sobrellenado cada 60 segundos de forma automatizada.
-4. **Cálculos de Ingeniería Automáticos:** Cálculo en tiempo real de volumen, peso y porcentaje de llenado basado en las dimensiones internas del tanque (diámetro y altura) y la densidad del producto.
-5. **Sistema de Alertas y Banner Global:** Activación de alarmas visuales si el nivel supera el límite configurado o si el suiche físico de nivel se activa. Incluye un mecanismo para silenciar/resetear alarmas escribiendo directamente al PLC.
-6. **Trazabilidad y Auditoría:** Registro obligatorio con fecha y hora de cualquier cambio realizado en la configuración de los tanques o del PLC.
+**Stack:** FastAPI · PyModbus · MongoDB · React · TypeScript · Tailwind CSS · Docker Compose
 
 ---
 
-## 🛠️ Arquitectura y Tecnologías
+## Requisitos previos
 
-El sistema está construido sobre un stack moderno, escalable y de baja latencia:
+| Herramienta | Versión mínima |
+|-------------|---------------|
+| Docker | 24.x |
+| Docker Compose | v2.x (plugin integrado) |
+| Git | cualquiera |
 
-* **Backend:** [FastAPI](https://fastapi.tiangolo.com/) (Python 3.10+) - Framework asíncrono de alto rendimiento.
-* **Driver Modbus:** [PyModbus](https://github.com/pymodbus-dev/pymodbus) - Cliente Modbus TCP asíncrono para la comunicación industrial.
-* **Base de Datos:** [MongoDB](https://www.mongodb.com/) - Base de datos NoSQL ideal para series temporales (Datalogger) y configuraciones flexibles.
-* **Driver de Base de Datos:** [Motor](https://motor.readthedocs.io/) - Driver asíncrono de MongoDB para Python.
-* **Despliegue:** [Docker](https://www.docker.com/) & **Docker Compose** - Orquestación de contenedores para un despliegue rápido y consistente en entornos locales o de producción (Edge/On-Premise).
-
----
-
-## 📁 Estructura del Proyecto
-
-```text
-scada-tank-project/
-│
-├── docker-compose.yml         # Orquestación de contenedores (App + MongoDB)
-├── README.md                  # Documentación principal del proyecto
-│
-├── /backend                   # Código fuente del backend (FastAPI)
-│   ├── Dockerfile             # Receta de construcción del contenedor backend
-│   ├── requirements.txt       # Dependencias de Python (FastAPI, pymodbus, motor, etc.)
-│   ├── main.py                # Punto de entrada de la aplicación y tareas en segundo plano
-│   ├── database.py            # Inicialización y conexiones de MongoDB
-│   ├── modbus_manager.py      # Lógica de comunicación cliente Modbus TCP e ingeniería
-│   ├── schemas.py             # Modelos de validación de datos (Pydantic)
-│   └── /routes                # Controladores de la API (Tanques, PLC, Alarmas, Históricos)
-
-```
+No se necesita Python ni Node instalados localmente; todo corre dentro de contenedores.
 
 ---
 
-## ⚙️ Requisitos Previos
+## Instalación — Desarrollo
 
-Antes de levantar el proyecto, asegúrate de tener instalado en tu servidor o máquina de desarrollo:
+### 1. Clonar el repositorio
 
-* **Docker** (versión 20.10 o superior)
-* **Docker Compose** (versión 1.29 o superior)
-
----
-
-## 📦 Instalación y Despliegue
-
-Sigue estos pasos para poner en marcha el sistema SCADA:
-
-1. Clona el repositorio en tu servidor o máquina local:
 ```bash
-git clone [https://github.com/tu-usuario/scada-tank-project.git](https://github.com/tu-usuario/scada-tank-project.git)
-cd scada-tank-project
-
+git clone https://github.com/jdrendon403/brenntag-tanks-scada.git
+cd brenntag-tanks-scada/tanks-scada
 ```
 
+### 2. Configurar variables de entorno
 
-2. Construye y levanta los servicios en segundo plano usando Docker Compose:
 ```bash
-docker-compose up -d --build
+# Linux / Mac
+cp .env.example .env
 
+# Windows (PowerShell)
+copy .env.example .env
 ```
 
+Editar `.env` según la conexión real:
 
-3. Verifica que los contenedores estén corriendo correctamente:
+| Variable | Por defecto | Descripción |
+|----------|-------------|-------------|
+| `MOCK_MODBUS` | `true` | `true` = simula el PLC; `false` = conecta al PLC real |
+| `PLC_HOST` | `192.168.1.100` | IP del PLC Modbus TCP |
+| `PLC_PORT` | `502` | Puerto Modbus TCP |
+| `MONGODB_URI` | `mongodb://db_scada:27017` | Cadena de conexión MongoDB |
+| `POLLING_INTERVAL` | `1.0` | Segundos entre lecturas Modbus |
+
+### 3. Levantar los servicios
+
 ```bash
-docker-compose ps
-
+docker compose up -d
 ```
 
+### 4. Verificar que todo esté corriendo
 
-4. La API de FastAPI estará disponible en: [http://localhost:8000](https://www.google.com/search?q=http://localhost:8000)
-* Puedes acceder a la documentación interactiva de la API (Swagger UI) en: [http://localhost:8000/docs](https://www.google.com/search?q=http://localhost:8000/docs)
+```bash
+docker compose ps
+```
 
+| URL | Descripción |
+|-----|-------------|
+| http://localhost:5173 | Interfaz web (React) |
+| http://localhost:8000/api/ | API REST |
+| http://localhost:8000/docs | Documentación Swagger |
+| ws://localhost:8000/ws/live | WebSocket tiempo real |
 
+### Comandos útiles en desarrollo
 
----
+```bash
+# Ver logs en tiempo real
+docker compose logs -f app_scada
+docker compose logs -f frontend
 
-## 🗺️ Mapa de Registros Modbus (Referencia)
+# Reiniciar solo el backend (aplica cambios sin rebuild)
+docker compose restart app_scada
 
-El backend lee y escribe de manera transparente en las siguientes direcciones de memoria del PLC:
+# Rebuild completo
+docker compose build --no-cache
 
-| Variable | Registro Inicial | Tipo de Dato | Función Modbus |
-| --- | --- | --- | --- |
-| **Altura TK1 a TK13** | `10001` a `10025` | Real (Float32) | Read Holding Registers (03) |
-| **Sobrellenado TK1 a TK13** | `10027` a `10051` | Real (Float32) | Read Holding Registers (03) |
-| **Switch de Nivel TK1 a TK13** | `3001` a `30013` | Booleano | Read Coils (01) / Discrete Inputs (02) |
-| **Alarma General 1 y 2** | `30014`, `30015` | Booleano | Read Coils (01) / Discrete Inputs (02) |
-| **Reset Alarma (Silenciar)** | `30016` | Booleano | **Write Single Coil (05)** |
-
-*Nota: Los tipos de datos `Real` ocupan dos registros consecutivos de 16 bits (32 bits en total) y se decodifican bajo el estándar IEEE 754.*
-
----
-
-## 📝 Configuración Inicial Obligatoria
-
-Al iniciar la aplicación por primera vez, es necesario parametrizar las dimensiones y los registros de los 13 tanques a través de la pantalla de configuración (o mediante los endpoints de la API).
-
-Un ejemplo de la carga de configuración de un tanque (`/config/tank`):
-
-```json
-{
-  "id": 1,
-  "nombre_producto": "Gasolina Corriente",
-  "diametro_interno": 4.50,
-  "altura_maxima": 12.00,
-  "densidad": 0.74,
-  "altura_alarma": 11.50,
-  "reg_altura": 10001,
-  "reg_sobrellenado": 10027,
-  "reg_suiche": 3001
-}
-
+# Detener todos los servicios
+docker compose down
 ```
 
 ---
 
-## 🕒 Lógica del Datalogger y Almacenamiento
+## Instalación — Producción
 
-* **Intervalo:** Cada 60 segundos, una tarea asíncrona (`Background Task`) realiza un barrido por los 13 tanques.
-* **Colección de Destino:** `historical_logs` en MongoDB.
-* **Estructura de Almacenamiento:** Cada registro guarda de forma atómica: `tank_id`, `timestamp`, `altura`, `porcentaje`, `volumen`, `peso` y `suiche_activo`. Esto asegura indexaciones rápidas para la pantalla de consultas históricas y generación de gráficas de tendencias del último mes.
-"""
+En producción, frontend y API quedan en un solo puerto HTTP (Nginx como proxy inverso).
 
-with open("README.md", "w", encoding="utf-8") as f:
-f.write(readme_content)
+### 1. Crear el archivo de entorno de producción
+
+```bash
+# Linux / Mac
+cp .env.prod.example .env.prod
+
+# Windows (PowerShell)
+copy .env.prod.example .env.prod
+```
+
+Editar `.env.prod` y reemplazar los valores marcados:
+
+```dotenv
+PLC_HOST=<IP real del PLC>
+MOCK_MODBUS=false
+MONGO_USER=admin
+MONGO_PASSWORD=<contraseña segura>
+MONGODB_URI=mongodb://admin:<contraseña>@db_scada:27017/scada_tanks?authSource=admin
+HTTP_PORT=80
+```
+
+> **Importante:** nunca subas `.env.prod` al repositorio; ya está en `.gitignore`.
+
+### 2. Construir y levantar
+
+```bash
+# Con Makefile
+make prod-build
+
+# Sin Makefile
+docker compose -f docker-compose.prod.yml --env-file .env.prod build --no-cache
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+### 3. Acceder
+
+La aplicación queda disponible en `http://<ip-del-servidor>:80`
+
+```bash
+# Ver logs de producción
+make logs-prod
+
+# Detener
+make down-prod
+```
+
+---
+
+## Arquitectura
 
 ```
-El archivo `README.md` ha sido generado de manera exitosa para tu proyecto. Este archivo contiene la documentación introductoria limpia, estructurada y en español que servirá como guía de instalación, arquitectura y referencia del mapa de registros Modbus tanto para ti como para cualquier desarrollador (o IA) que continúe con el proyecto.
+tanks-scada/
+├── docker-compose.yml          # Desarrollo: backend + frontend (hot-reload) + MongoDB
+├── docker-compose.prod.yml     # Producción: backend + nginx + MongoDB
+├── backend/
+│   └── app/
+│       ├── main.py             # FastAPI lifespan + routers
+│       ├── core/               # Config (Pydantic Settings) + conexión MongoDB
+│       ├── modbus/             # Cliente Modbus TCP (real y mock)
+│       ├── models/             # Modelos Pydantic: tanques, alarmas, histórico
+│       ├── routers/            # Endpoints REST + WebSocket
+│       └── services/          # Calculadora, servicio de alarmas, datalogger
+└── frontend/
+    └── src/
+        ├── pages/              # Vista general, detalle, configuración, histórico, alarmas
+        ├── components/         # AlarmBanner, TankIcon, LevelBar
+        ├── context/            # TankDataContext (estado global WebSocket)
+        └── hooks/              # useWebSocket (reconexión automática)
+```
 
-Tu archivo README.md está listo
-[file-tag: code-generated-file-0-1779142504207759968]
+## Mapa de registros Modbus
 
-Con el `README.md` y la base documental listos, ¿cuál sería el siguiente paso en el que te gustaría trabajar? Podemos avanzar en el desarrollo de los componentes visuales del frontend en React/Vue, o pulir la gestión de las alarmas en el backend.
+| Variable | Registros | Tipo | FC |
+|----------|-----------|------|----|
+| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | FC04 |
+| Sobrellenado TK1–TK13 | 10027–10052 | Float32 ABCD | FC04 |
+| Switch nivel TK1–TK13 | 30001–30013 | Bool | FC02 |
+| Alarma 1 / Alarma 2 | 30014–30015 | Bool | FC02 |
+| Reset alarma | 30016 | Bool | FC05 (escritura) |
 
+---
+
+## Probar una alarma manualmente
+
+```bash
+# Bajar umbral de alarma del tanque 3 a 1.5 m
+curl -X PUT http://localhost:8000/api/config/tanks/3 \
+  -H "Content-Type: application/json" \
+  -d '{"alarm_height": 1.5}'
+
+# Restaurar (usar valor del PLC)
+curl -X PUT http://localhost:8000/api/config/tanks/3 \
+  -H "Content-Type: application/json" \
+  -d '{"alarm_height": null}'
 ```
