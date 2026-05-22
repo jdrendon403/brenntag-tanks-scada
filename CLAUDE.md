@@ -17,8 +17,9 @@ Tanks/
     │   ├── app/
     │   │   ├── main.py             # FastAPI lifespan + routers
     │   │   ├── core/
-    │   │   │   ├── config.py       # Pydantic Settings (lee .env)
-    │   │   │   └── database.py     # Motor async + seed 13 tanques + carga tablas de aforo
+    │   │   │   ├── config.py       # Pydantic Settings (lee .env); incluye AUTH_*
+    │   │   │   ├── database.py     # Motor async + seed 13 tanques + carga tablas de aforo
+    │   │   │   └── security.py     # create_token() + dependencia require_auth (JWT HS256)
     │   │   ├── modbus/
     │   │   │   ├── client.py       # ModbusClientWrapper (real + mock)
     │   │   │   └── poller.py       # Loop asyncio cada 1 s; publica al WS
@@ -27,9 +28,10 @@ Tanks/
     │   │   │   ├── alarm.py        # AlarmRecord
     │   │   │   └── history.py      # HistoryRecord
     │   │   ├── routers/
+    │   │   │   ├── auth.py         # POST /api/auth/login
     │   │   │   ├── tanks.py        # GET /api/tanks/, GET /api/tanks/{id}
-    │   │   │   ├── config.py       # config CRUD + calibración CSV + escritura PLC
-    │   │   │   ├── alarms.py       # GET /api/alarms/, PATCH /{id}/ack, POST /reset
+    │   │   │   ├── config.py       # config CRUD + calibración CSV + escritura PLC (protegidos)
+    │   │   │   ├── alarms.py       # GET /api/alarms/, PATCH /{id}/ack*, POST /reset* (*auth)
     │   │   │   ├── history.py      # GET /api/history/
     │   │   │   └── websocket.py    # WS /ws/live + WebSocketManager
     │   │   ├── services/
@@ -46,12 +48,14 @@ Tanks/
         │   ├── hooks/useWebSocket.ts
         │   ├── context/
         │   │   ├── TankDataContext.tsx  # estado global WebSocket
-        │   │   └── UnitContext.tsx      # unidades de visualización globales (localStorage)
+        │   │   ├── UnitContext.tsx      # unidades de visualización globales (localStorage)
+        │   │   └── AuthContext.tsx      # token JWT en sessionStorage + interceptores axios
         │   ├── utils/units.ts      # conversión y formateo: altura, volumen
         │   ├── components/
         │   │   ├── AlarmBanner.tsx
         │   │   ├── TankIcon.tsx
-        │   │   └── LevelBar.tsx
+        │   │   ├── LevelBar.tsx
+        │   │   └── LoginModal.tsx  # modal overlay aparece automáticamente en 401
         │   └── pages/
         │       ├── GeneralView.tsx
         │       ├── TankDetail.tsx
@@ -110,6 +114,9 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 | `PLC_PORT`        | `502`                    | Puerto Modbus TCP                        |
 | `MONGODB_URI`     | `mongodb://db_scada:27017` | Cadena de conexión MongoDB             |
 | `POLLING_INTERVAL`| `1.0`                    | Segundos entre lecturas Modbus           |
+| `AUTH_USER`       | `admin`                  | Usuario para acceso a escritura          |
+| `AUTH_PASSWORD`   | `scada1234`              | Contraseña (**cambiar en producción**)   |
+| `AUTH_SECRET`     | `cambia-este-secreto`    | Clave secreta JWT (**cambiar en producción**) |
 
 ---
 

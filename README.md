@@ -46,6 +46,9 @@ Editar `.env` según la conexión real:
 | `PLC_PORT` | `502` | Puerto Modbus TCP |
 | `MONGODB_URI` | `mongodb://db_scada:27017` | Cadena de conexión MongoDB |
 | `POLLING_INTERVAL` | `1.0` | Segundos entre lecturas Modbus |
+| `AUTH_USER` | `admin` | Usuario para acceso a escritura |
+| `AUTH_PASSWORD` | `scada1234` | Contraseña (**cambiar en producción**) |
+| `AUTH_SECRET` | `cambia-este-secreto` | Clave secreta JWT (**cambiar en producción**) |
 
 ### 3. Levantar los servicios
 
@@ -146,17 +149,17 @@ tanks-scada/
 ├── backend/
 │   └── app/
 │       ├── main.py             # FastAPI lifespan + routers
-│       ├── core/               # Config (Pydantic Settings) + conexión MongoDB
+│       ├── core/               # Config, MongoDB, security (JWT)
 │       ├── modbus/             # Cliente Modbus TCP (real y mock)
 │       ├── models/             # Modelos Pydantic: tanques, alarmas, histórico
-│       ├── routers/            # Endpoints REST + WebSocket
+│       ├── routers/            # Endpoints REST + WebSocket + auth
 │       ├── services/           # Calculadora, servicio de alarmas, datalogger
 │       └── data/calibration/   # Tablas de aforo SGS en JSON (tank_N.json)
 └── frontend/
     └── src/
         ├── pages/              # Vista general, detalle, configuración, histórico, alarmas
-        ├── components/         # AlarmBanner, TankIcon, LevelBar
-        ├── context/            # TankDataContext + UnitContext (unidades globales)
+        ├── components/         # AlarmBanner, TankIcon, LevelBar, LoginModal
+        ├── context/            # TankDataContext + UnitContext + AuthContext
         ├── utils/              # units.ts — conversión y formateo de unidades
         └── hooks/              # useWebSocket (reconexión automática)
 ```
@@ -172,6 +175,29 @@ tanks-scada/
 | Reset alarma | 30016 | Bool | FC05 | Escritura coil |
 | Rango sensor (min/max) | configurable | Float32 | FC16 | Holding registers; dirección = registro − 1 |
 | Límite sobrellenado | configurable | Float32 | FC16 | Usa overflow_register; dirección = registro − 1 |
+
+---
+
+## Autenticación
+
+Las operaciones de **escritura** (configuración, calibración, ACK de alarmas, escritura al PLC) requieren autenticación. Las lecturas y el WebSocket son públicos.
+
+Al intentar cualquier acción protegida sin sesión activa, aparece automáticamente un modal de login. Tras autenticarse, el token se almacena en `sessionStorage` y se adjunta a todas las peticiones (`Authorization: Bearer <token>`). Cerrar la pestaña equivale a cerrar sesión.
+
+```bash
+# Obtener token manualmente
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "scada1234"}'
+
+# Usar token en peticiones protegidas
+curl -X PUT http://localhost:8000/api/config/tanks/1 \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"product": "Aceite"}'
+```
+
+> En producción cambiar `AUTH_PASSWORD` y `AUTH_SECRET` en `.env`.
 
 ---
 
