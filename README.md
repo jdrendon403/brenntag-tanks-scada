@@ -150,24 +150,90 @@ tanks-scada/
 │       ├── modbus/             # Cliente Modbus TCP (real y mock)
 │       ├── models/             # Modelos Pydantic: tanques, alarmas, histórico
 │       ├── routers/            # Endpoints REST + WebSocket
-│       └── services/          # Calculadora, servicio de alarmas, datalogger
+│       ├── services/           # Calculadora, servicio de alarmas, datalogger
+│       └── data/calibration/   # Tablas de aforo SGS en JSON (tank_N.json)
 └── frontend/
     └── src/
         ├── pages/              # Vista general, detalle, configuración, histórico, alarmas
         ├── components/         # AlarmBanner, TankIcon, LevelBar
-        ├── context/            # TankDataContext (estado global WebSocket)
+        ├── context/            # TankDataContext + UnitContext (unidades globales)
+        ├── utils/              # units.ts — conversión y formateo de unidades
         └── hooks/              # useWebSocket (reconexión automática)
 ```
 
 ## Mapa de registros Modbus
 
-| Variable | Registros | Tipo | FC |
-|----------|-----------|------|----|
-| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | FC04 |
-| Sobrellenado TK1–TK13 | 10027–10052 | Float32 ABCD | FC04 |
-| Switch nivel TK1–TK13 | 30001–30013 | Bool | FC02 |
-| Alarma 1 / Alarma 2 | 30014–30015 | Bool | FC02 |
-| Reset alarma | 30016 | Bool | FC05 (escritura) |
+| Variable | Registros | Tipo | FC | Notas |
+|----------|-----------|------|----|-------|
+| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | FC04 | 2 registros por tanque |
+| Sobrellenado TK1–TK13 | 10027–10052 | Float32 ABCD | FC04 | 2 registros por tanque |
+| Switch nivel TK1–TK13 | 30001–30013 | Bool | **FC01** | dirección = registro − 30001 |
+| Alarma 1 / Alarma 2 | 30014–30015 | Bool | FC01 | Solo lectura |
+| Reset alarma | 30016 | Bool | FC05 | Escritura coil |
+| Rango sensor (min/max) | configurable | Float32 | FC16 | Holding registers; dirección = registro − 1 |
+| Límite sobrellenado | configurable | Float32 | FC16 | Usa overflow_register; dirección = registro − 1 |
+
+---
+
+## Tablas de aforo (calibración SGS)
+
+El volumen se calcula por **interpolación lineal** desde tablas de aforo certificadas (SGS), en lugar de la fórmula cilíndrica. Cada tanque puede tener su tabla en `backend/app/data/calibration/tank_N.json`.
+
+### Cargar una tabla desde CSV
+
+```bash
+# El CSV debe tener columnas: height_mm, volume_l (alturas ascendentes)
+curl -X POST http://localhost:8000/api/config/tanks/1/calibration \
+  -F "file=@tabla_tk1.csv"
+```
+
+Formato del CSV:
+
+```
+height_mm,volume_l
+0,417.57
+210,1099.40
+260,2042.72
+...
+```
+
+Sin tabla cargada, el sistema usa la fórmula cilíndrica como fallback.
+
+### Configurar y enviar rango del sensor al PLC
+
+```bash
+# 1. Guardar rango en DB
+curl -X PUT http://localhost:8000/api/config/tanks/1 \
+  -H "Content-Type: application/json" \
+  -d '{"sensor_range": {"min_value": 0.0, "max_value": 10.0, "min_register": 40001, "max_register": 40003}}'
+
+# 2. Escribir al PLC vía FC16
+curl -X POST http://localhost:8000/api/config/tanks/1/sensor-range/write
+```
+
+### Enviar límite de sobrellenado al PLC
+
+```bash
+# 1. Configurar altura de alarma
+curl -X PUT http://localhost:8000/api/config/tanks/1 \
+  -H "Content-Type: application/json" \
+  -d '{"alarm_height": 7.5}'
+
+# 2. Escribir al PLC (usa overflow_register del tanque vía FC16)
+curl -X POST http://localhost:8000/api/config/tanks/1/overflow-limit/write
+```
+
+---
+
+## Unidades de visualización
+
+Seleccionables globalmente desde la pantalla de **Configuración**; se persisten en `localStorage`.
+
+| Variable | Unidades disponibles | Por defecto |
+|----------|---------------------|-------------|
+| Nivel / Altura | mm, cm, m | cm |
+| Volumen | L, gal (US) | L |
+| Peso | kg | kg (fijo) |
 
 ---
 

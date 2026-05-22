@@ -18,6 +18,18 @@ export interface ModbusConfig {
   switch_register: number
 }
 
+export interface CalibrationPoint {
+  height_mm: number
+  volume_l: number
+}
+
+export interface SensorRange {
+  min_value: number
+  max_value: number
+  min_register: number
+  max_register: number
+}
+
 export interface TankConfig {
   tank_id: number
   name: string
@@ -27,6 +39,8 @@ export interface TankConfig {
   max_height: number
   alarm_height: number | null
   modbus: ModbusConfig
+  calibration_table?: CalibrationPoint[]
+  sensor_range?: SensorRange | null
 }
 
 export interface AlarmRecord {

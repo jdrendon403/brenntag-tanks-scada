@@ -8,15 +8,29 @@ class TankModbusConfig(BaseModel):
     switch_register: int
 
 
+class CalibrationPoint(BaseModel):
+    height_mm: float
+    volume_l: float
+
+
+class SensorRange(BaseModel):
+    min_value: float = 0.0      # metros en el 0 % de la señal analógica
+    max_value: float = 10.0     # metros en el 100 % de la señal analógica
+    min_register: int = 0       # registro holding Modbus para escribir el mínimo
+    max_register: int = 0       # registro holding Modbus para escribir el máximo
+
+
 class TankConfig(BaseModel):
     tank_id: int
     name: str = ""
     product: str = ""
     density: float = 1.0       # kg/L
-    diameter: float = 5.0      # metros (diámetro interno)
-    max_height: float = 8.0    # metros
+    diameter: float = 5.0      # metros — solo se usa como fallback sin tabla de aforo
+    max_height: float = 8.0    # metros — solo se usa como fallback sin tabla de aforo
     alarm_height: Optional[float] = None  # override del registro Modbus; None = usa valor del PLC
     modbus: TankModbusConfig
+    calibration_table: list[CalibrationPoint] = []
+    sensor_range: Optional[SensorRange] = None
 
 
 class TankConfigUpdate(BaseModel):
@@ -27,6 +41,8 @@ class TankConfigUpdate(BaseModel):
     max_height: Optional[float] = None
     alarm_height: Optional[float] = None
     modbus: Optional[TankModbusConfig] = None
+    calibration_table: Optional[list[CalibrationPoint]] = None
+    sensor_range: Optional[SensorRange] = None
 
 
 class TankState(BaseModel):

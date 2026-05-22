@@ -18,24 +18,25 @@ Tanks/
     │   │   ├── main.py             # FastAPI lifespan + routers
     │   │   ├── core/
     │   │   │   ├── config.py       # Pydantic Settings (lee .env)
-    │   │   │   └── database.py     # Motor async + seed 13 tanques + índices
+    │   │   │   └── database.py     # Motor async + seed 13 tanques + carga tablas de aforo
     │   │   ├── modbus/
     │   │   │   ├── client.py       # ModbusClientWrapper (real + mock)
     │   │   │   └── poller.py       # Loop asyncio cada 1 s; publica al WS
     │   │   ├── models/
-    │   │   │   ├── tank.py         # TankConfig, TankState, TankConfigUpdate
+    │   │   │   ├── tank.py         # TankConfig, TankState, TankConfigUpdate, SensorRange
     │   │   │   ├── alarm.py        # AlarmRecord
     │   │   │   └── history.py      # HistoryRecord
     │   │   ├── routers/
     │   │   │   ├── tanks.py        # GET /api/tanks/, GET /api/tanks/{id}
-    │   │   │   ├── config.py       # GET/PUT /api/config/tanks/{id}, GET /api/config/audit
+    │   │   │   ├── config.py       # config CRUD + calibración CSV + escritura PLC
     │   │   │   ├── alarms.py       # GET /api/alarms/, PATCH /{id}/ack, POST /reset
     │   │   │   ├── history.py      # GET /api/history/
     │   │   │   └── websocket.py    # WS /ws/live + WebSocketManager
-    │   │   └── services/
-    │   │       ├── calculator.py   # volumen / peso / porcentaje
-    │   │       ├── alarm_service.py# detección, ACK, reset, recuperación al arranque
-    │   │       └── datalogger.py   # snapshot MongoDB cada 60 s
+    │   │   ├── services/
+    │   │   │   ├── calculator.py   # volumen (tabla o fórmula) / peso / porcentaje
+    │   │   │   ├── alarm_service.py# detección, ACK, reset, recuperación al arranque
+    │   │   │   └── datalogger.py   # snapshot MongoDB cada 60 s
+    │   │   └── data/calibration/   # Tablas de aforo SGS: tank_N.json
     │   ├── requirements.txt
     │   ├── Dockerfile
     │   └── .env                    # desarrollo local (no commitear en prod)
@@ -43,7 +44,10 @@ Tanks/
         ├── src/
         │   ├── api/client.ts       # axios, URLs relativas (proxy Vite/Nginx)
         │   ├── hooks/useWebSocket.ts
-        │   ├── context/TankDataContext.tsx
+        │   ├── context/
+        │   │   ├── TankDataContext.tsx  # estado global WebSocket
+        │   │   └── UnitContext.tsx      # unidades de visualización globales (localStorage)
+        │   ├── utils/units.ts      # conversión y formateo: altura, volumen
         │   ├── components/
         │   │   ├── AlarmBanner.tsx
         │   │   ├── TankIcon.tsx
@@ -97,9 +101,7 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 > **Nota:** prod usa un volumen `mongo_data_prod` separado del volumen de desarrollo `mongo_data`.
 > Si es la primera vez, MongoDB crea las credenciales automáticamente desde `MONGO_USER/MONGO_PASSWORD`.
 
-### Desarrollo (hot-reload)
-
-Variables clave en `.env.example`:
+### Variables clave en `.env.example`
 
 | Variable          | Por defecto              | Descripción                              |
 |-------------------|--------------------------|------------------------------------------|
@@ -121,6 +123,10 @@ Variables clave en `.env.example`:
 | `GET`  | `/api/config/tanks` | Configuración completa de los 13 tanques |
 | `GET`  | `/api/config/tanks/{id}` | Configuración de un tanque |
 | `PUT`  | `/api/config/tanks/{id}` | Actualizar configuración (guarda auditoría) |
+| `POST` | `/api/config/tanks/{id}/calibration` | Subir tabla de aforo desde CSV |
+| `POST` | `/api/config/tanks/{id}/sensor-range/write` | Enviar rango del sensor al PLC (FC16) |
+| `POST` | `/api/config/tanks/{id}/overflow-limit/write` | Enviar límite sobrellenado al PLC (FC16) |
+| `GET`  | `/api/config/plc` | Info de conexión PLC (host, puerto, modo mock) |
 | `GET`  | `/api/config/audit` | Log de cambios de configuración |
 | `GET`  | `/api/alarms/` | Listado de alarmas (filtros: `active_only`, `tank_id`) |
 | `PATCH`| `/api/alarms/{id}/ack` | Reconocer alarma (ACK) |
@@ -136,10 +142,12 @@ Variables clave en `.env.example`:
 |---------------------|---------------|---------|------|-------|
 | Altura TK1–TK13     | 10001–10026   | Float32 | FC04 | 2 registros por tanque, Big-Endian ABCD |
 | Sobrellenado TK1–13 | 10027–10052   | Float32 | FC04 | 2 registros por tanque |
-| SWTk1–SWTk13        | 30001–30013   | Bool    | FC02 | 1 registro por tanque |
-| Alarma 1            | 30014         | Bool    | FC02 | Solo lectura |
-| Alarma 2            | 30015         | Bool    | FC02 | Solo lectura |
+| SWTk1–SWTk13        | 30001–30013   | Bool    | **FC01** | dirección = registro − 30001 |
+| Alarma 1            | 30014         | Bool    | FC01 | Solo lectura |
+| Alarma 2            | 30015         | Bool    | FC01 | Solo lectura |
 | Reset Alarma        | 30016         | Bool    | FC05 | Escritura coil |
+| Rango sensor min/max | configurable | Float32 | FC16 | Holding; dirección = registro − 1 |
+| Límite sobrellenado | configurable  | Float32 | FC16 | Usa overflow_register; dirección = registro − 1 |
 
 Todos los registros son configurables por tanque en MongoDB (`tanks_config.modbus`).
 
@@ -148,11 +156,26 @@ Todos los registros son configurables por tanque en MongoDB (`tanks_config.modbu
 ## Lógica de negocio
 
 ### Cálculos (services/calculator.py)
+
+Con tabla de aforo cargada:
+```
+volumen (L)  = interpolación lineal en tabla de aforo (height_mm → volume_l)
+porcentaje   = (volumen / volumen_máximo_tabla) × 100  [clamp 0–100]
+peso (kg)    = volumen × densidad
+```
+
+Sin tabla (fallback):
 ```
 volumen (L)  = π × (diámetro/2)² × altura × 1000
-peso (kg)    = volumen × densidad
 porcentaje   = (altura / max_height) × 100  [clamp 0–100]
 ```
+
+### Tablas de aforo (data/calibration/tank_N.json)
+
+- Formato: `{"table": [{"height_mm": float, "volume_l": float}, ...]}`
+- Alturas en mm desde el fondo del tanque, orden ascendente.
+- Cargadas automáticamente al seed al arrancar si el archivo existe.
+- También cargables desde la UI vía CSV (`height_mm`, `volume_l`).
 
 ### Detección de alarma (services/alarm_service.py)
 ```
@@ -174,12 +197,33 @@ Guarda snapshot de todos los tanques en la colección `history` cada 60 segundos
 |----------|------|-------------|
 | Vista General | `/` | Grid 13 tanques; borde rojo parpadeante en alarma; clic → detalle |
 | Detalle | `/tank/:id` | 3 barras verticales + gráfico histórico recharts; selector de variable |
-| Configuración | `/config?tank=N` | Formulario (dimensiones, producto, Modbus, alarm_height); tabla de auditoría |
+| Configuración | `/config?tank=N` | Producto, densidad, Modbus, sensor range, tabla de aforo editable, alarma |
 | Histórico | `/history` | Filtros fecha/variable; gráfico + tabla; máx 1440 registros |
 | Alarmas | `/alarms` | Tabla con ACK, filtros; botón Reset PLC |
 
 **AlarmBanner**: visible en todas las rutas cuando hay alarma activa. Click derecho → reset Modbus.  
 **WebSocket**: reconexión automática cada 3 s si cae la conexión.
+
+### Unidades de visualización (UnitContext)
+
+Seleccionables globalmente desde la pantalla de Configuración; se persisten en `localStorage` (`scada_display_units`).
+
+| Variable | Opciones | Por defecto |
+|----------|----------|-------------|
+| Nivel / Altura | mm, cm, m | cm |
+| Volumen | L, gal US | L |
+| Peso | kg | kg (fijo) |
+
+### Pantalla Configuración — secciones
+
+- **Unidades de visualización** — selector global (borde índigo).
+- **Producto** — nombre y producto del tanque.
+- **Propiedades del producto** — densidad (kg/L).
+- **Alarma de Sobrellenado** — checkbox para activar override; campo altura; botón **"Enviar al PLC"** (naranja) escribe al `overflow_register` vía FC16.
+- **Registros Modbus — Lectura** — height, overflow, switch registers.
+- **Rango del Sensor de Nivel** — min/max valor + registros holding; botón **"Enviar al PLC"** (ámbar) escribe vía FC16.
+- **Tabla de Aforo** — visor/editor con filtro, edición inline, agregar/eliminar filas; carga CSV completa.
+- **Historial de cambios** — últimas 20 entradas del audit log.
 
 ---
 
@@ -190,6 +234,9 @@ Guarda snapshot de todos los tanques en la colección `history` cada 60 segundos
 - **Fase 3** ✅ WebSocket tiempo real (implementado dentro de Fase 1)
 - **Fase 4** ✅ Frontend React: todas las 5 pantallas, TypeScript limpio, Tailwind
 - **Fase 5** ✅ Docker producción: Nginx proxy + build multi-stage + `.env` de producción
+- **Fase 6** ✅ Tablas de aforo SGS: interpolación lineal, carga CSV, editor UI, JSON por tanque
+- **Fase 7** ✅ Unidades de visualización: mm/cm/m + L/gal, UnitContext global
+- **Fase 8** ✅ Rango de sensor + límite sobrellenado escritura al PLC (FC16); corrección FC01 suiche
 
 ---
 
@@ -215,6 +262,16 @@ curl -X PUT http://localhost:8000/api/config/tanks/3 \
 curl -X PUT http://localhost:8000/api/config/tanks/3 \
   -H "Content-Type: application/json" \
   -d '{"alarm_height": null}'
+
+# Cargar tabla de aforo desde CSV para TK1
+curl -X POST http://localhost:8000/api/config/tanks/1/calibration \
+  -F "file=@tabla_tk1.csv"
+
+# Enviar rango del sensor al PLC (requiere sensor_range configurado)
+curl -X POST http://localhost:8000/api/config/tanks/1/sensor-range/write
+
+# Enviar límite de sobrellenado al PLC (requiere alarm_height configurado)
+curl -X POST http://localhost:8000/api/config/tanks/1/overflow-limit/write
 
 # Conectar WebSocket manualmente
 wscat -c ws://localhost:8000/ws/live

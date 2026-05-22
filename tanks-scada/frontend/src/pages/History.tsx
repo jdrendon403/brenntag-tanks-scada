@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { getHistory } from '../api/client'
+import { useUnits } from '../context/UnitContext'
+import { convertHeight, convertVolume } from '../utils/units'
 import type { HistoryRecord } from '../types'
 
 type Variable = 'height' | 'percentage' | 'volume' | 'weight'
-
-const VAR_META: Record<Variable, { label: string; unit: string; color: string }> = {
-  height:     { label: 'Altura (m)',   unit: 'm',  color: '#3b82f6' },
-  percentage: { label: 'Nivel (%)',    unit: '%',  color: '#22c55e' },
-  volume:     { label: 'Volumen (L)',  unit: 'L',  color: '#8b5cf6' },
-  weight:     { label: 'Peso (kg)',    unit: 'kg', color: '#f59e0b' },
-}
 
 function isoLocal(d: Date) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
@@ -19,6 +14,7 @@ function isoLocal(d: Date) {
 export default function History() {
   const now  = new Date()
   const ago  = new Date(now.getTime() - 24 * 3600 * 1000)
+  const { units } = useUnits()
 
   const [tankId,   setTankId]   = useState(1)
   const [variable, setVariable] = useState<Variable>('height')
@@ -28,6 +24,21 @@ export default function History() {
   const [loading,  setLoading]  = useState(false)
 
   const ids = Array.from({ length: 13 }, (_, i) => i + 1)
+
+  // Meta dinámica según unidades seleccionadas
+  const varMeta: Record<Variable, { label: string; unit: string; color: string }> = {
+    height:     { label: `Altura (${units.height})`,   unit: units.height, color: '#3b82f6' },
+    percentage: { label: 'Nivel (%)',                  unit: '%',          color: '#22c55e' },
+    volume:     { label: `Volumen (${units.volume})`,  unit: units.volume, color: '#8b5cf6' },
+    weight:     { label: 'Peso (kg)',                  unit: 'kg',         color: '#f59e0b' },
+  }
+
+  // Datos convertidos para el gráfico y la tabla
+  const displayData = data.map(r => ({
+    ...r,
+    height: convertHeight(r.height, units.height),
+    volume: convertVolume(r.volume, units.volume),
+  }))
 
   async function load() {
     setLoading(true)
@@ -44,7 +55,7 @@ export default function History() {
 
   useEffect(() => { load() }, []) // eslint-disable-line
 
-  const { label, unit, color } = VAR_META[variable]
+  const { label, unit, color } = varMeta[variable]
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
@@ -64,8 +75,8 @@ export default function History() {
           <span className="text-slate-400 text-xs mb-1 block">Variable</span>
           <select value={variable} onChange={e => setVariable(e.target.value as Variable)}
             className="bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-sm text-white">
-            {(Object.keys(VAR_META) as Variable[]).map(v =>
-              <option key={v} value={v}>{VAR_META[v].label}</option>
+            {(Object.keys(varMeta) as Variable[]).map(v =>
+              <option key={v} value={v}>{varMeta[v].label}</option>
             )}
           </select>
         </label>
@@ -92,13 +103,13 @@ export default function History() {
       <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
         <h2 className="text-sm font-semibold text-slate-300 mb-3">
           TK{tankId} — {label}
-          <span className="text-slate-500 ml-2 font-normal">({data.length} registros)</span>
+          <span className="text-slate-500 ml-2 font-normal">({displayData.length} registros)</span>
         </h2>
-        {data.length === 0 ? (
+        {displayData.length === 0 ? (
           <p className="text-center text-slate-500 py-16">Sin registros en el rango seleccionado</p>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data}>
+            <LineChart data={displayData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="timestamp"
                 tickFormatter={ts => new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
@@ -117,7 +128,7 @@ export default function History() {
       </div>
 
       {/* Table */}
-      {data.length > 0 && (
+      {displayData.length > 0 && (
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-auto max-h-64">
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-slate-800 border-b border-slate-700">
@@ -127,7 +138,7 @@ export default function History() {
               </tr>
             </thead>
             <tbody>
-              {[...data].reverse().map((r, i) => (
+              {[...displayData].reverse().map((r, i) => (
                 <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                   <td className="px-3 py-1.5 font-mono text-slate-300">
                     {new Date(r.timestamp).toLocaleString('es-CO')}

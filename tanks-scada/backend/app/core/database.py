@@ -1,5 +1,21 @@
+import json
+from pathlib import Path
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+
 from .config import settings
+
+_CALIB_DIR = Path(__file__).parent.parent / "data" / "calibration"
+
+
+def _load_calibration(tank_id: int) -> list[dict]:
+    path = _CALIB_DIR / f"tank_{tank_id}.json"
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding="utf-8")).get("table", [])
+        except Exception:
+            return []
+    return []
 
 _client: AsyncIOMotorClient = None
 _db: AsyncIOMotorDatabase = None
@@ -31,8 +47,17 @@ def get_db() -> AsyncIOMotorDatabase:
 
 
 async def _seed_tanks() -> None:
-    """Insert default config for all 13 tanks if collection is empty."""
+    """Insert default config for all 13 tanks if collection is empty.
+    If calibration JSON files exist in app/data/calibration/, they are embedded."""
     if await _db.tanks_config.count_documents({}) > 0:
+        # Refresh calibration tables from JSON files without touching user config
+        for i in range(1, 14):
+            table = _load_calibration(i)
+            if table:
+                await _db.tanks_config.update_one(
+                    {"tank_id": i},
+                    {"$set": {"calibration_table": table}},
+                )
         return
 
     tanks = []
@@ -44,6 +69,7 @@ async def _seed_tanks() -> None:
             "density": 1.0,
             "diameter": 5.0,
             "max_height": 8.0,
+            "calibration_table": _load_calibration(i),
             "modbus": {
                 # Altura: Float32, 2 registros consecutivos (FC04)
                 "height_register": 10001 + (i - 1) * 2,

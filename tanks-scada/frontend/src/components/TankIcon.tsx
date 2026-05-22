@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import type { TankState } from '../types'
+import { useUnits } from '../context/UnitContext'
+import { convertHeight, convertVolume } from '../utils/units'
 
 function fmt(n: number, dec = 0) {
   return n.toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec })
@@ -16,9 +18,14 @@ interface Props { tank: TankState }
 
 export function TankIcon({ tank }: Props) {
   const nav = useNavigate()
+  const { units } = useUnits()
   const { tank_id, name, product, height, percentage, volume, weight, alarm } = tank
   const clampedPct = Math.min(100, Math.max(0, percentage))
   const color = levelColor(clampedPct, alarm)
+
+  const displayHeight = convertHeight(height, units.height)
+  const displayVolume = convertVolume(volume, units.volume)
+  const hDec = units.height === 'm' ? 2 : 0
 
   return (
     <div
@@ -53,11 +60,11 @@ export function TankIcon({ tank }: Props) {
         <div className="flex-1 space-y-0.5 text-xs min-w-0">
           <div className="flex justify-between">
             <span className="text-slate-400">Altura</span>
-            <span className="text-white font-mono">{height.toFixed(2)} m</span>
+            <span className="text-white font-mono">{fmt(displayHeight, hDec)} {units.height}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-400">Volumen</span>
-            <span className="text-white font-mono">{fmt(volume)} L</span>
+            <span className="text-white font-mono">{fmt(displayVolume, 0)} {units.volume}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-400">Peso</span>

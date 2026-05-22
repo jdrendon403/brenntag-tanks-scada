@@ -1,9 +1,12 @@
+import logging
 import math
 import struct
 import time
 from typing import Optional
 
 from ..core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class ModbusClientWrapper:
@@ -13,7 +16,7 @@ class ModbusClientWrapper:
 
     Convención de registros (dirección 1-based, igual que en la documentación):
       - Float32: FC04 read_input_registers, 2 words, orden Big-Endian (ABCD).
-      - Bool:    FC02 read_discrete_inputs.
+      - Bool:    FC01 read_coils (registro 30xxx → dirección = reg - 30001).
       - Coil:    FC05 write_coil (reset alarma).
     """
 
@@ -59,11 +62,11 @@ class ModbusClientWrapper:
             return None
 
     async def read_bool(self, register: int) -> Optional[bool]:
-        """Lee un discrete input (dirección 1-based)."""
+        """Lee un coil FC01 (registro con prefijo 30xxx; dirección = register - 30001)."""
         if settings.mock_modbus:
             return self._mock_bool(register)
         try:
-            result = await self._client.read_discrete_inputs(register - 1, count=1, slave=1)
+            result = await self._client.read_coils(register - 30001, count=1, slave=1)
             if result.isError():
                 return None
             return bool(result.bits[0])
@@ -78,6 +81,21 @@ class ModbusClientWrapper:
             result = await self._client.write_coil(register - 1, value, slave=1)
             return not result.isError()
         except Exception:
+            return False
+
+    async def write_float32(self, register: int, value: float) -> bool:
+        """FC16: escribe un Float32 Big-Endian en dos registros holding consecutivos (1-based)."""
+        if settings.mock_modbus:
+            logger.debug("MOCK write_float32 reg=%d val=%f", register, value)
+            return True
+        try:
+            raw = struct.pack(">f", value)
+            word_hi = struct.unpack(">H", raw[0:2])[0]
+            word_lo = struct.unpack(">H", raw[2:4])[0]
+            result = await self._client.write_registers(register - 1, [word_hi, word_lo], slave=1)
+            return not result.isError()
+        except Exception as exc:
+            logger.error("write_float32 error reg=%d: %s", register, exc)
             return False
 
     # ------------------------------------------------------------------ #

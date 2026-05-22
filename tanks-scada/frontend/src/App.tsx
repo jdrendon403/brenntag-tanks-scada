@@ -1,5 +1,6 @@
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { TankDataProvider, useTankData } from './context/TankDataContext'
+import { UnitProvider } from './context/UnitContext'
 import { AlarmBanner } from './components/AlarmBanner'
 import GeneralView   from './pages/GeneralView'
 import TankDetail    from './pages/TankDetail'
@@ -54,9 +55,11 @@ function Layout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <TankDataProvider>
-        <Layout />
-      </TankDataProvider>
+      <UnitProvider>
+        <TankDataProvider>
+          <Layout />
+        </TankDataProvider>
+      </UnitProvider>
     </BrowserRouter>
   )
 }

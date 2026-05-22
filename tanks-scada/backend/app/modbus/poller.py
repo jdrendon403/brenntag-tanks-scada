@@ -5,7 +5,10 @@ from typing import Any, Dict, Optional
 
 from ..core.config import settings
 from ..core.database import get_db
-from ..services.calculator import calculate_percentage, calculate_volume, calculate_weight
+from ..services.calculator import (
+    calculate_percentage, calculate_percentage_volume,
+    calculate_volume, calculate_weight, get_max_volume,
+)
 from .client import modbus_client
 
 logger = logging.getLogger(__name__)
@@ -50,9 +53,13 @@ async def _poll_once() -> None:
         switch_active = await modbus_client.read_bool(modbus_cfg["switch_register"]) or False
 
         height = max(0.0, height)
-        volume = calculate_volume(cfg["diameter"], height)
+        table = cfg.get("calibration_table") or []
+        volume = calculate_volume(cfg["diameter"], height, table or None)
         weight = calculate_weight(volume, cfg["density"])
-        percentage = calculate_percentage(height, cfg["max_height"])
+        if table:
+            percentage = calculate_percentage_volume(volume, get_max_volume(table))
+        else:
+            percentage = calculate_percentage(height, cfg["max_height"])
         alarm = (height > overflow_limit) or switch_active
 
         tank_states[tank_id] = {
