@@ -9,7 +9,7 @@ from .core.config import settings
 from .core.database import close_db, connect_db
 from .modbus.client import modbus_client
 from .modbus import poller
-from .routers import alarms, config, history, tanks
+from .routers import alarms, auth, config, history, tanks
 from .routers.websocket import router as ws_router, ws_manager
 from .services.datalogger import datalog_loop
 
@@ -40,6 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(tanks.router)
 app.include_router(config.router)
 app.include_router(alarms.router)

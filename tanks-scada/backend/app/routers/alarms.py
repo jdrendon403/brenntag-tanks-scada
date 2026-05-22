@@ -2,9 +2,10 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..core.database import get_db
+from ..core.security import require_auth
 from ..services.alarm_service import ack_alarm, reset_alarm
 
 router = APIRouter(prefix="/api/alarms", tags=["alarms"])
@@ -35,7 +36,7 @@ async def get_alarms(
 
 
 @router.patch("/{alarm_id}/ack")
-async def acknowledge_alarm(alarm_id: str):
+async def acknowledge_alarm(alarm_id: str, _: str = Depends(require_auth)):
     db = get_db()
     try:
         modified = await ack_alarm(alarm_id, db)
@@ -47,7 +48,7 @@ async def acknowledge_alarm(alarm_id: str):
 
 
 @router.post("/reset")
-async def reset_alarm_endpoint():
+async def reset_alarm_endpoint(_: str = Depends(require_auth)):
     db = get_db()
     success = await reset_alarm(db)
     return {"success": success}

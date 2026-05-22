@@ -3,9 +3,10 @@ import io
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
 from ..core.database import get_db
+from ..core.security import require_auth
 from ..models.tank import TankConfig, TankConfigUpdate
 
 router = APIRouter(prefix="/api/config", tags=["config"])
@@ -28,7 +29,7 @@ async def get_tank_config(tank_id: int):
 
 
 @router.put("/tanks/{tank_id}")
-async def update_tank_config(tank_id: int, body: TankConfigUpdate):
+async def update_tank_config(tank_id: int, body: TankConfigUpdate, _: str = Depends(require_auth)):
     db = get_db()
     # exclude_unset para distinguir "no enviado" de "enviado como null"
     raw = body.model_dump(exclude_unset=True)
@@ -60,7 +61,7 @@ async def update_tank_config(tank_id: int, body: TankConfigUpdate):
 
 
 @router.post("/tanks/{tank_id}/calibration")
-async def upload_calibration(tank_id: int, file: UploadFile = File(...)):
+async def upload_calibration(tank_id: int, file: UploadFile = File(...), _: str = Depends(require_auth)):
     """Carga una tabla de aforo desde CSV con columnas height_mm y volume_l."""
     db = get_db()
     try:
@@ -103,7 +104,7 @@ async def upload_calibration(tank_id: int, file: UploadFile = File(...)):
 
 
 @router.post("/tanks/{tank_id}/sensor-range/write")
-async def write_sensor_range_to_plc(tank_id: int):
+async def write_sensor_range_to_plc(tank_id: int, _: str = Depends(require_auth)):
     """Lee el sensor_range configurado en DB y escribe los valores al PLC vía Modbus FC16."""
     from ..modbus.client import modbus_client
 
@@ -132,7 +133,7 @@ async def write_sensor_range_to_plc(tank_id: int):
 
 
 @router.post("/tanks/{tank_id}/overflow-limit/write")
-async def write_overflow_limit_to_plc(tank_id: int):
+async def write_overflow_limit_to_plc(tank_id: int, _: str = Depends(require_auth)):
     """Escribe alarm_height al registro overflow del PLC vía Modbus FC16."""
     from ..modbus.client import modbus_client
 

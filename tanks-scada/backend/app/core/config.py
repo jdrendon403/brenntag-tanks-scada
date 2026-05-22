@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     mock_modbus: bool = True
     polling_interval: float = 1.0
     log_level: str = "INFO"
+    auth_user: str = "admin"
+    auth_password: str = "scada1234"
+    auth_secret: str = "cambia-este-secreto-en-produccion"
 
     model_config = {"env_file": ".env"}
 
