@@ -45,5 +45,11 @@ logs/
 *.tmp.*
 *.tmp
 
+# Vite build cache
+*.timestamp-*.mjs
+
+# Claude Code — memoria local de sesión
+.claude/
+
 # MongoDB data volumes (solo en contenedores)
 mongo_data/
