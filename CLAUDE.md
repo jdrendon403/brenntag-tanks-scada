@@ -145,16 +145,18 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 
 ## Mapa de registros Modbus
 
-| Variable            | Registros     | Tipo    | FC   | Notas |
-|---------------------|---------------|---------|------|-------|
-| Altura TK1–TK13     | 10001–10026   | Float32 | FC04 | 2 registros por tanque, Big-Endian ABCD |
-| Sobrellenado TK1–13 | 10027–10052   | Float32 | FC04 | 2 registros por tanque |
-| SWTk1–SWTk13        | 30001–30013   | Bool    | **FC01** | dirección = registro − 30001 |
-| Alarma 1            | 30014         | Bool    | FC01 | Solo lectura |
-| Alarma 2            | 30015         | Bool    | FC01 | Solo lectura |
-| Reset Alarma        | 30016         | Bool    | FC05 | Escritura coil |
-| Rango sensor min/max | configurable | Float32 | FC16 | Holding; dirección = registro − 1 |
-| Límite sobrellenado | configurable  | Float32 | FC16 | Usa overflow_register; dirección = registro − 1 |
+> El PLC envía y recibe **todas las alturas en milímetros**. El backend divide por 1000 al leer y multiplica por 1000 al escribir.
+
+| Variable | Registros | Tipo | FC | Notas |
+|----------|-----------|------|----|-------|
+| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | **FC03** | 2 regs por tanque; valor en mm |
+| Sobrellenado TK1–TK13 | 10301–10326 | Float32 ABCD | **FC03** | 2 regs por tanque; valor en mm |
+| Sensor mín. TK1–TK13 | 10101–10126 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
+| Sensor máx. TK1–TK13 | 10201–10226 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
+| SWTk1–SWTk13 | 6001–6013 | Bool | **FC01** | dirección = registro − 1 |
+| Alarma 1 | 30014 | Bool | FC01 | Solo lectura |
+| Alarma 2 | 30015 | Bool | FC01 | Solo lectura |
+| Reset Alarma | 30016 | Bool | FC05 | Escritura coil |
 
 Todos los registros son configurables por tanque en MongoDB (`tanks_config.modbus`).
 
@@ -186,9 +188,9 @@ porcentaje   = (altura / max_height) × 100  [clamp 0–100]
 
 ### Detección de alarma (services/alarm_service.py)
 ```
-alarma = (altura > overflow_limit) OR (suiche == True)
+alarma = (altura_m > overflow_limit_m) OR (suiche == True)
 ```
-- `overflow_limit` = `alarm_height` del config si está seteado, sino el valor del registro Modbus.
+- `overflow_limit` = `alarm_height` del config (en metros) si está seteado, sino el valor del registro Modbus dividido por 1000.
 - Al detectar: inserta registro en `alarms` con `active=True`.
 - Al resolver: actualiza `end_time` y `active=False`.
 - Al arrancar: recupera alarmas activas de MongoDB para no perder estado tras reinicio.
@@ -226,9 +228,9 @@ Seleccionables globalmente desde la pantalla de Configuración; se persisten en 
 - **Unidades de visualización** — selector global (borde índigo).
 - **Producto** — nombre y producto del tanque.
 - **Propiedades del producto** — densidad (kg/L).
-- **Alarma de Sobrellenado** — checkbox para activar override; campo altura; botón **"Enviar al PLC"** (naranja) escribe al `overflow_register` vía FC16.
+- **Alarma de Sobrellenado** — checkbox para activar override; campo altura en **mm**; botón **"Enviar al PLC"** (naranja) escribe al `overflow_register` vía FC16 (convierte mm→m en BD, m→mm al PLC).
 - **Registros Modbus — Lectura** — height, overflow, switch registers.
-- **Rango del Sensor de Nivel** — min/max valor + registros holding; botón **"Enviar al PLC"** (ámbar) escribe vía FC16.
+- **Rango del Sensor de Nivel** — min/max en **mm** + registros holding; botón **"Enviar al PLC"** (ámbar) escribe vía FC16 (misma conversión mm↔m).
 - **Tabla de Aforo** — visor/editor con filtro, edición inline, agregar/eliminar filas; carga CSV completa.
 - **Historial de cambios** — últimas 20 entradas del audit log.
 
@@ -244,6 +246,7 @@ Seleccionables globalmente desde la pantalla de Configuración; se persisten en 
 - **Fase 6** ✅ Tablas de aforo SGS: interpolación lineal, carga CSV, editor UI, JSON por tanque
 - **Fase 7** ✅ Unidades de visualización: mm/cm/m + L/gal, UnitContext global
 - **Fase 8** ✅ Rango de sensor + límite sobrellenado escritura al PLC (FC16); corrección FC01 suiche
+- **Fase 9** ✅ Integración PLC real: FC03 holding registers, conversión mm↔m, seed con registros reales, UI configuración en mm
 
 ---
 

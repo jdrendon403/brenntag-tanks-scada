@@ -29,6 +29,8 @@ cd brenntag-tanks-scada/tanks-scada
 
 ### 2. Configurar variables de entorno
 
+Crear un archivo `.env` en `tanks-scada/` (sobreescribe los valores de `.env.example`):
+
 ```bash
 # Linux / Mac
 cp .env.example .env
@@ -168,13 +170,15 @@ tanks-scada/
 
 | Variable | Registros | Tipo | FC | Notas |
 |----------|-----------|------|----|-------|
-| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | FC04 | 2 registros por tanque |
-| Sobrellenado TK1–TK13 | 10027–10052 | Float32 ABCD | FC04 | 2 registros por tanque |
-| Switch nivel TK1–TK13 | 30001–30013 | Bool | **FC01** | dirección = registro − 30001 |
+| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | **FC03** | 2 registros por tanque; valor en **mm** |
+| Sobrellenado TK1–TK13 | 10301–10326 | Float32 ABCD | **FC03** | 2 registros por tanque; valor en **mm** |
+| Switch nivel TK1–TK13 | 6001–6013 | Bool | **FC01** | dirección = registro − 1 |
+| Sensor mín. TK1–TK13 | 10101–10126 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
+| Sensor máx. TK1–TK13 | 10201–10226 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
 | Alarma 1 / Alarma 2 | 30014–30015 | Bool | FC01 | Solo lectura |
 | Reset alarma | 30016 | Bool | FC05 | Escritura coil |
-| Rango sensor (min/max) | configurable | Float32 | FC16 | Holding registers; dirección = registro − 1 |
-| Límite sobrellenado | configurable | Float32 | FC16 | Usa overflow_register; dirección = registro − 1 |
+
+> El PLC envía todas las alturas en **milímetros**. El backend convierte a metros internamente. Los registros de configuración (overflow, sensor range) se escriben al PLC también en mm.
 
 ---
 
@@ -228,25 +232,27 @@ Sin tabla cargada, el sistema usa la fórmula cilíndrica como fallback.
 ### Configurar y enviar rango del sensor al PLC
 
 ```bash
-# 1. Guardar rango en DB
+# 1. Guardar rango en DB (min_value y max_value en metros)
 curl -X PUT http://localhost:8000/api/config/tanks/1 \
   -H "Content-Type: application/json" \
-  -d '{"sensor_range": {"min_value": 0.0, "max_value": 10.0, "min_register": 40001, "max_register": 40003}}'
+  -d '{"sensor_range": {"min_value": 0.0, "max_value": 10.0, "min_register": 10101, "max_register": 10201}}'
 
-# 2. Escribir al PLC vía FC16
+# 2. Escribir al PLC vía FC16 (el backend convierte m → mm antes de enviar)
 curl -X POST http://localhost:8000/api/config/tanks/1/sensor-range/write
 ```
 
 ### Enviar límite de sobrellenado al PLC
 
 ```bash
-# 1. Configurar altura de alarma
+# 1. Configurar altura de alarma en metros (la UI muestra y recibe mm)
 curl -X PUT http://localhost:8000/api/config/tanks/1 \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"alarm_height": 7.5}'
+  -d '{"alarm_height": 9.0}'
 
-# 2. Escribir al PLC (usa overflow_register del tanque vía FC16)
-curl -X POST http://localhost:8000/api/config/tanks/1/overflow-limit/write
+# 2. Escribir al PLC (el backend convierte m → mm antes de enviar vía FC16)
+curl -X POST http://localhost:8000/api/config/tanks/1/overflow-limit/write \
+  -H "Authorization: Bearer <token>"
 ```
 
 ---

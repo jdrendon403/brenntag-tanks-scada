@@ -19,15 +19,18 @@ El sistema actuará como cliente Modbus TCP. La dirección IP del PLC y el puert
 
 ### Tabla de Registros Modbus
 
+> Todos los valores de altura que el PLC envía o recibe están en **milímetros**. El backend convierte a metros para uso interno.
 
-| Variable              | Registro      | Tipo de dato   | Descripción                                     |
-| --------------------- | ------------- | -------------- | ----------------------------------------------- |
-| Altura TK1-TK13       | 10001 - 10025 | Real (Float32) | Medida de altura actual (incrementos de 2 regs) |
-| Sobrellenado TK1-TK13 | 10027 - 10051 | Real (Float32) | Límite de altura configurado en PLC             |
-| SWTk1 - SWTk13        | 3001 - 30013  | Bool           | Suiche de nivel físico (Sobre llenado)          |
-| Alarma 1              | 30014         | Bool           | Indicador de alarma general 1                   |
-| Alarma 2              | 30015         | Bool           | Indicador de alarma general 2                   |
-| **Reset Alarma**      | **30016**     | **Bool**       | **Escritura para silenciar alarmas**            |
+| Variable | Registros | Tipo | FC | Descripción |
+|----------|-----------|------|----|-------------|
+| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | **FC03** | Nivel actual en **mm** (2 regs por tanque) |
+| Sobrellenado TK1–TK13 | 10301–10326 | Float32 ABCD | **FC03** | Límite de sobrellenado en **mm** (2 regs por tanque) |
+| Sensor mín. TK1–TK13 | 10101–10126 | Float32 ABCD | FC03 / FC16 | Rango mínimo del sensor en **mm** |
+| Sensor máx. TK1–TK13 | 10201–10226 | Float32 ABCD | FC03 / FC16 | Rango máximo del sensor en **mm** |
+| SWTk1–SWTk13 | 6001–6013 | Bool | **FC01** | Suiche de nivel físico; dirección = registro − 1 |
+| Alarma 1 | 30014 | Bool | FC01 | Indicador de alarma general 1 |
+| Alarma 2 | 30015 | Bool | FC01 | Indicador de alarma general 2 |
+| **Reset Alarma** | **30016** | **Bool** | **FC05** | **Escritura para silenciar alarmas** |
 
 
 ## 4. Pantallas de la Aplicación
