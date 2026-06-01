@@ -1,0 +1,444 @@
+{
+  "table": [
+    {
+      "height_mm": 0.0,
+      "volume_l": 3000.01
+    },
+    {
+      "height_mm": 100.0,
+      "volume_l": 8093.02
+    },
+    {
+      "height_mm": 200.0,
+      "volume_l": 14222.02
+    },
+    {
+      "height_mm": 300.0,
+      "volume_l": 20346.02
+    },
+    {
+      "height_mm": 400.0,
+      "volume_l": 26474.0
+    },
+    {
+      "height_mm": 500.0,
+      "volume_l": 32611.02
+    },
+    {
+      "height_mm": 600.0,
+      "volume_l": 38747.02
+    },
+    {
+      "height_mm": 700.0,
+      "volume_l": 44884.01
+    },
+    {
+      "height_mm": 800.0,
+      "volume_l": 51021.03
+    },
+    {
+      "height_mm": 900.0,
+      "volume_l": 57157.03
+    },
+    {
+      "height_mm": 1000.0,
+      "volume_l": 63294.02
+    },
+    {
+      "height_mm": 1100.0,
+      "volume_l": 69424.04
+    },
+    {
+      "height_mm": 1200.0,
+      "volume_l": 75553.03
+    },
+    {
+      "height_mm": 1300.0,
+      "volume_l": 81683.05
+    },
+    {
+      "height_mm": 1400.0,
+      "volume_l": 87812.05
+    },
+    {
+      "height_mm": 1500.0,
+      "volume_l": 93942.03
+    },
+    {
+      "height_mm": 1600.0,
+      "volume_l": 100071.03
+    },
+    {
+      "height_mm": 1700.0,
+      "volume_l": 106200.07
+    },
+    {
+      "height_mm": 1800.0,
+      "volume_l": 112330.05
+    },
+    {
+      "height_mm": 1900.0,
+      "volume_l": 118459.05
+    },
+    {
+      "height_mm": 2000.0,
+      "volume_l": 124589.07
+    },
+    {
+      "height_mm": 2100.0,
+      "volume_l": 130719.05
+    },
+    {
+      "height_mm": 2200.0,
+      "volume_l": 136854.07
+    },
+    {
+      "height_mm": 2300.0,
+      "volume_l": 142990.07
+    },
+    {
+      "height_mm": 2400.0,
+      "volume_l": 149125.09
+    },
+    {
+      "height_mm": 2500.0,
+      "volume_l": 155261.09
+    },
+    {
+      "height_mm": 2600.0,
+      "volume_l": 161396.07
+    },
+    {
+      "height_mm": 2700.0,
+      "volume_l": 167531.08
+    },
+    {
+      "height_mm": 2800.0,
+      "volume_l": 173667.08
+    },
+    {
+      "height_mm": 2900.0,
+      "volume_l": 179802.1
+    },
+    {
+      "height_mm": 3000.0,
+      "volume_l": 185938.1
+    },
+    {
+      "height_mm": 3100.0,
+      "volume_l": 192073.08
+    },
+    {
+      "height_mm": 3200.0,
+      "volume_l": 198209.08
+    },
+    {
+      "height_mm": 3300.0,
+      "volume_l": 204344.1
+    },
+    {
+      "height_mm": 3400.0,
+      "volume_l": 210480.1
+    },
+    {
+      "height_mm": 3500.0,
+      "volume_l": 216615.12
+    },
+    {
+      "height_mm": 3600.0,
+      "volume_l": 222750.1
+    },
+    {
+      "height_mm": 3700.0,
+      "volume_l": 228886.1
+    },
+    {
+      "height_mm": 3800.0,
+      "volume_l": 235021.11
+    },
+    {
+      "height_mm": 3900.0,
+      "volume_l": 241157.11
+    },
+    {
+      "height_mm": 4000.0,
+      "volume_l": 247292.13
+    },
+    {
+      "height_mm": 4100.0,
+      "volume_l": 253428.13
+    },
+    {
+      "height_mm": 4200.0,
+      "volume_l": 259563.11
+    },
+    {
+      "height_mm": 4300.0,
+      "volume_l": 265701.12
+    },
+    {
+      "height_mm": 4400.0,
+      "volume_l": 271838.14
+    },
+    {
+      "height_mm": 4500.0,
+      "volume_l": 277976.15
+    },
+    {
+      "height_mm": 4600.0,
+      "volume_l": 284113.14
+    },
+    {
+      "height_mm": 4700.0,
+      "volume_l": 290251.14
+    },
+    {
+      "height_mm": 4800.0,
+      "volume_l": 296388.13
+    },
+    {
+      "height_mm": 4900.0,
+      "volume_l": 302526.14
+    },
+    {
+      "height_mm": 5000.0,
+      "volume_l": 308663.16
+    },
+    {
+      "height_mm": 5100.0,
+      "volume_l": 314801.17
+    },
+    {
+      "height_mm": 5200.0,
+      "volume_l": 320938.15
+    },
+    {
+      "height_mm": 5300.0,
+      "volume_l": 327075.14
+    },
+    {
+      "height_mm": 5400.0,
+      "volume_l": 333213.14
+    },
+    {
+      "height_mm": 5500.0,
+      "volume_l": 339350.17
+    },
+    {
+      "height_mm": 5600.0,
+      "volume_l": 345488.17
+    },
+    {
+      "height_mm": 5700.0,
+      "volume_l": 351625.16
+    },
+    {
+      "height_mm": 5800.0,
+      "volume_l": 357763.17
+    },
+    {
+      "height_mm": 5900.0,
+      "volume_l": 363900.19
+    },
+    {
+      "height_mm": 6000.0,
+      "volume_l": 370038.16
+    },
+    {
+      "height_mm": 6100.0,
+      "volume_l": 376175.18
+    },
+    {
+      "height_mm": 6200.0,
+      "volume_l": 382313.19
+    },
+    {
+      "height_mm": 6300.0,
+      "volume_l": 388451.2
+    },
+    {
+      "height_mm": 6400.0,
+      "volume_l": 394591.17
+    },
+    {
+      "height_mm": 6500.0,
+      "volume_l": 400732.17
+    },
+    {
+      "height_mm": 6600.0,
+      "volume_l": 406873.21
+    },
+    {
+      "height_mm": 6700.0,
+      "volume_l": 413014.2
+    },
+    {
+      "height_mm": 6800.0,
+      "volume_l": 419155.2
+    },
+    {
+      "height_mm": 6900.0,
+      "volume_l": 425296.2
+    },
+    {
+      "height_mm": 7000.0,
+      "volume_l": 431436.21
+    },
+    {
+      "height_mm": 7100.0,
+      "volume_l": 437577.21
+    },
+    {
+      "height_mm": 7200.0,
+      "volume_l": 443718.21
+    },
+    {
+      "height_mm": 7300.0,
+      "volume_l": 449859.21
+    },
+    {
+      "height_mm": 7400.0,
+      "volume_l": 456000.2
+    },
+    {
+      "height_mm": 7500.0,
+      "volume_l": 462141.2
+    },
+    {
+      "height_mm": 7600.0,
+      "volume_l": 468282.24
+    },
+    {
+      "height_mm": 7700.0,
+      "volume_l": 474422.21
+    },
+    {
+      "height_mm": 7800.0,
+      "volume_l": 480563.21
+    },
+    {
+      "height_mm": 7900.0,
+      "volume_l": 486704.25
+    },
+    {
+      "height_mm": 8000.0,
+      "volume_l": 492845.25
+    },
+    {
+      "height_mm": 8100.0,
+      "volume_l": 498986.24
+    },
+    {
+      "height_mm": 8200.0,
+      "volume_l": 505127.24
+    },
+    {
+      "height_mm": 8300.0,
+      "volume_l": 511267.25
+    },
+    {
+      "height_mm": 8400.0,
+      "volume_l": 517407.23
+    },
+    {
+      "height_mm": 8500.0,
+      "volume_l": 523530.25
+    },
+    {
+      "height_mm": 8600.0,
+      "volume_l": 529653.26
+    },
+    {
+      "height_mm": 8700.0,
+      "volume_l": 535776.24
+    },
+    {
+      "height_mm": 8800.0,
+      "volume_l": 541899.26
+    },
+    {
+      "height_mm": 8900.0,
+      "volume_l": 548021.26
+    },
+    {
+      "height_mm": 9000.0,
+      "volume_l": 554144.27
+    },
+    {
+      "height_mm": 9100.0,
+      "volume_l": 560267.25
+    },
+    {
+      "height_mm": 9200.0,
+      "volume_l": 566390.27
+    },
+    {
+      "height_mm": 9300.0,
+      "volume_l": 572513.29
+    },
+    {
+      "height_mm": 9400.0,
+      "volume_l": 578635.28
+    },
+    {
+      "height_mm": 9500.0,
+      "volume_l": 584758.26
+    },
+    {
+      "height_mm": 9600.0,
+      "volume_l": 590881.28
+    },
+    {
+      "height_mm": 9700.0,
+      "volume_l": 597004.3
+    },
+    {
+      "height_mm": 9800.0,
+      "volume_l": 603126.29
+    },
+    {
+      "height_mm": 9900.0,
+      "volume_l": 609249.27
+    },
+    {
+      "height_mm": 10000.0,
+      "volume_l": 615372.29
+    },
+    {
+      "height_mm": 10100.0,
+      "volume_l": 621495.3
+    },
+    {
+      "height_mm": 10200.0,
+      "volume_l": 627618.28
+    },
+    {
+      "height_mm": 10300.0,
+      "volume_l": 633749.29
+    },
+    {
+      "height_mm": 10400.0,
+      "volume_l": 639884.3
+    },
+    {
+      "height_mm": 10500.0,
+      "volume_l": 646019.32
+    },
+    {
+      "height_mm": 10600.0,
+      "volume_l": 652154.3
+    },
+    {
+      "height_mm": 10700.0,
+      "volume_l": 658289.32
+    },
+    {
+      "height_mm": 10800.0,
+      "volume_l": 664424.3
+    },
+    {
+      "height_mm": 10900.0,
+      "volume_l": 670559.31
+    }
+  ]
+}

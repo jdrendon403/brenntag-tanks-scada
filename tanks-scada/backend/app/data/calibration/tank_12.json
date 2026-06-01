@@ -1,0 +1,376 @@
+{
+  "table": [
+    {
+      "height_mm": 0.0,
+      "volume_l": 244.99
+    },
+    {
+      "height_mm": 100.0,
+      "volume_l": 1881.01
+    },
+    {
+      "height_mm": 200.0,
+      "volume_l": 3518.01
+    },
+    {
+      "height_mm": 300.0,
+      "volume_l": 5160.01
+    },
+    {
+      "height_mm": 400.0,
+      "volume_l": 6802.01
+    },
+    {
+      "height_mm": 500.0,
+      "volume_l": 8456.0
+    },
+    {
+      "height_mm": 600.0,
+      "volume_l": 10122.0
+    },
+    {
+      "height_mm": 700.0,
+      "volume_l": 11766.99
+    },
+    {
+      "height_mm": 800.0,
+      "volume_l": 13403.99
+    },
+    {
+      "height_mm": 900.0,
+      "volume_l": 15040.01
+    },
+    {
+      "height_mm": 1000.0,
+      "volume_l": 16676.03
+    },
+    {
+      "height_mm": 1100.0,
+      "volume_l": 18312.01
+    },
+    {
+      "height_mm": 1200.0,
+      "volume_l": 19948.02
+    },
+    {
+      "height_mm": 1300.0,
+      "volume_l": 21585.02
+    },
+    {
+      "height_mm": 1400.0,
+      "volume_l": 23221.0
+    },
+    {
+      "height_mm": 1500.0,
+      "volume_l": 24857.02
+    },
+    {
+      "height_mm": 1600.0,
+      "volume_l": 26495.01
+    },
+    {
+      "height_mm": 1700.0,
+      "volume_l": 28134.01
+    },
+    {
+      "height_mm": 1800.0,
+      "volume_l": 29772.0
+    },
+    {
+      "height_mm": 1900.0,
+      "volume_l": 31411.01
+    },
+    {
+      "height_mm": 2000.0,
+      "volume_l": 33049.03
+    },
+    {
+      "height_mm": 2100.0,
+      "volume_l": 34688.0
+    },
+    {
+      "height_mm": 2200.0,
+      "volume_l": 36326.02
+    },
+    {
+      "height_mm": 2300.0,
+      "volume_l": 37965.03
+    },
+    {
+      "height_mm": 2400.0,
+      "volume_l": 39604.0
+    },
+    {
+      "height_mm": 2500.0,
+      "volume_l": 41242.02
+    },
+    {
+      "height_mm": 2600.0,
+      "volume_l": 42881.03
+    },
+    {
+      "height_mm": 2700.0,
+      "volume_l": 44519.02
+    },
+    {
+      "height_mm": 2800.0,
+      "volume_l": 46158.02
+    },
+    {
+      "height_mm": 2900.0,
+      "volume_l": 47796.01
+    },
+    {
+      "height_mm": 3000.0,
+      "volume_l": 49435.02
+    },
+    {
+      "height_mm": 3100.0,
+      "volume_l": 51073.04
+    },
+    {
+      "height_mm": 3200.0,
+      "volume_l": 52712.01
+    },
+    {
+      "height_mm": 3300.0,
+      "volume_l": 54350.03
+    },
+    {
+      "height_mm": 3400.0,
+      "volume_l": 55988.02
+    },
+    {
+      "height_mm": 3500.0,
+      "volume_l": 57627.03
+    },
+    {
+      "height_mm": 3600.0,
+      "volume_l": 59265.01
+    },
+    {
+      "height_mm": 3700.0,
+      "volume_l": 60903.04
+    },
+    {
+      "height_mm": 3800.0,
+      "volume_l": 62542.04
+    },
+    {
+      "height_mm": 3900.0,
+      "volume_l": 64180.03
+    },
+    {
+      "height_mm": 4000.0,
+      "volume_l": 65818.01
+    },
+    {
+      "height_mm": 4100.0,
+      "volume_l": 67455.02
+    },
+    {
+      "height_mm": 4200.0,
+      "volume_l": 69088.04
+    },
+    {
+      "height_mm": 4300.0,
+      "volume_l": 70720.05
+    },
+    {
+      "height_mm": 4400.0,
+      "volume_l": 72353.04
+    },
+    {
+      "height_mm": 4500.0,
+      "volume_l": 73986.02
+    },
+    {
+      "height_mm": 4600.0,
+      "volume_l": 75619.05
+    },
+    {
+      "height_mm": 4700.0,
+      "volume_l": 77252.04
+    },
+    {
+      "height_mm": 4800.0,
+      "volume_l": 78884.04
+    },
+    {
+      "height_mm": 4900.0,
+      "volume_l": 80517.03
+    },
+    {
+      "height_mm": 5000.0,
+      "volume_l": 82150.02
+    },
+    {
+      "height_mm": 5100.0,
+      "volume_l": 83783.05
+    },
+    {
+      "height_mm": 5200.0,
+      "volume_l": 85415.05
+    },
+    {
+      "height_mm": 5300.0,
+      "volume_l": 87048.04
+    },
+    {
+      "height_mm": 5400.0,
+      "volume_l": 88681.03
+    },
+    {
+      "height_mm": 5500.0,
+      "volume_l": 90314.06
+    },
+    {
+      "height_mm": 5600.0,
+      "volume_l": 91946.02
+    },
+    {
+      "height_mm": 5700.0,
+      "volume_l": 93579.05
+    },
+    {
+      "height_mm": 5800.0,
+      "volume_l": 95212.04
+    },
+    {
+      "height_mm": 5900.0,
+      "volume_l": 96845.03
+    },
+    {
+      "height_mm": 6000.0,
+      "volume_l": 98479.04
+    },
+    {
+      "height_mm": 6100.0,
+      "volume_l": 100114.03
+    },
+    {
+      "height_mm": 6200.0,
+      "volume_l": 101748.05
+    },
+    {
+      "height_mm": 6300.0,
+      "volume_l": 103383.04
+    },
+    {
+      "height_mm": 6400.0,
+      "volume_l": 105018.04
+    },
+    {
+      "height_mm": 6500.0,
+      "volume_l": 106652.05
+    },
+    {
+      "height_mm": 6600.0,
+      "volume_l": 108287.04
+    },
+    {
+      "height_mm": 6700.0,
+      "volume_l": 109922.04
+    },
+    {
+      "height_mm": 6800.0,
+      "volume_l": 111556.05
+    },
+    {
+      "height_mm": 6900.0,
+      "volume_l": 113191.04
+    },
+    {
+      "height_mm": 7000.0,
+      "volume_l": 114825.05
+    },
+    {
+      "height_mm": 7100.0,
+      "volume_l": 116460.05
+    },
+    {
+      "height_mm": 7200.0,
+      "volume_l": 118095.04
+    },
+    {
+      "height_mm": 7300.0,
+      "volume_l": 119729.05
+    },
+    {
+      "height_mm": 7400.0,
+      "volume_l": 121364.05
+    },
+    {
+      "height_mm": 7500.0,
+      "volume_l": 122999.04
+    },
+    {
+      "height_mm": 7600.0,
+      "volume_l": 124633.06
+    },
+    {
+      "height_mm": 7700.0,
+      "volume_l": 126268.05
+    },
+    {
+      "height_mm": 7800.0,
+      "volume_l": 127902.06
+    },
+    {
+      "height_mm": 7900.0,
+      "volume_l": 129535.05
+    },
+    {
+      "height_mm": 8000.0,
+      "volume_l": 131168.08
+    },
+    {
+      "height_mm": 8100.0,
+      "volume_l": 132802.05
+    },
+    {
+      "height_mm": 8200.0,
+      "volume_l": 134435.08
+    },
+    {
+      "height_mm": 8300.0,
+      "volume_l": 136069.05
+    },
+    {
+      "height_mm": 8400.0,
+      "volume_l": 137702.08
+    },
+    {
+      "height_mm": 8500.0,
+      "volume_l": 139335.06
+    },
+    {
+      "height_mm": 8600.0,
+      "volume_l": 140969.08
+    },
+    {
+      "height_mm": 8700.0,
+      "volume_l": 142604.07
+    },
+    {
+      "height_mm": 8800.0,
+      "volume_l": 144242.06
+    },
+    {
+      "height_mm": 8900.0,
+      "volume_l": 145881.06
+    },
+    {
+      "height_mm": 9000.0,
+      "volume_l": 147520.07
+    },
+    {
+      "height_mm": 9100.0,
+      "volume_l": 149158.06
+    },
+    {
+      "height_mm": 9200.0,
+      "volume_l": 150797.06
+    }
+  ]
+}
