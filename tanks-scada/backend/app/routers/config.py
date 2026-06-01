@@ -117,8 +117,11 @@ async def write_sensor_range_to_plc(tank_id: int, _: str = Depends(require_auth)
     if not sr:
         raise HTTPException(status_code=400, detail="El tanque no tiene rango de sensor configurado")
 
-    ok_min = await modbus_client.write_float32(sr["min_register"], sr["min_value"])
-    ok_max = await modbus_client.write_float32(sr["max_register"], sr["max_value"])
+    # PLC espera los valores en mm; min_value/max_value se almacenan en metros
+    min_mm = sr["min_value"] * 1000.0
+    max_mm = sr["max_value"] * 1000.0
+    ok_min = await modbus_client.write_float32(sr["min_register"], min_mm)
+    ok_max = await modbus_client.write_float32(sr["max_register"], max_mm)
 
     if not (ok_min and ok_max):
         raise HTTPException(status_code=502, detail="Error al escribir en el PLC")
@@ -126,10 +129,10 @@ async def write_sensor_range_to_plc(tank_id: int, _: str = Depends(require_auth)
     await db.audit_log.insert_one({
         "timestamp": datetime.now(timezone.utc),
         "tank_id": tank_id,
-        "changes": {"sensor_range_written_to_plc": sr},
+        "changes": {"sensor_range_written_to_plc": {"min_m": sr["min_value"], "min_mm": min_mm, "max_m": sr["max_value"], "max_mm": max_mm}},
     })
 
-    return {"ok": True, "min_written": ok_min, "max_written": ok_max}
+    return {"ok": True, "min_m": sr["min_value"], "min_mm": min_mm, "max_m": sr["max_value"], "max_mm": max_mm}
 
 
 @router.post("/tanks/{tank_id}/overflow-limit/write")
@@ -147,7 +150,9 @@ async def write_overflow_limit_to_plc(tank_id: int, _: str = Depends(require_aut
         raise HTTPException(status_code=400, detail="El tanque no tiene altura de alarma configurada")
 
     overflow_register = cfg["modbus"]["overflow_register"]
-    ok = await modbus_client.write_float32(overflow_register, alarm_height)
+    # PLC espera el valor en mm; alarm_height se almacena en metros
+    value_mm = alarm_height * 1000.0
+    ok = await modbus_client.write_float32(overflow_register, value_mm)
 
     if not ok:
         raise HTTPException(status_code=502, detail="Error al escribir en el PLC")
@@ -155,10 +160,10 @@ async def write_overflow_limit_to_plc(tank_id: int, _: str = Depends(require_aut
     await db.audit_log.insert_one({
         "timestamp": datetime.now(timezone.utc),
         "tank_id": tank_id,
-        "changes": {"overflow_limit_written_to_plc": {"register": overflow_register, "value": alarm_height}},
+        "changes": {"overflow_limit_written_to_plc": {"register": overflow_register, "value_m": alarm_height, "value_mm": value_mm}},
     })
 
-    return {"ok": True, "register": overflow_register, "value_written": alarm_height}
+    return {"ok": True, "register": overflow_register, "value_m": alarm_height, "value_mm": value_mm}
 
 
 @router.get("/plc")

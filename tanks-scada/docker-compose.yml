@@ -12,8 +12,9 @@ services:
       - "8000:8000"
     env_file:
       - .env.example
+      - .env
     environment:
-      - MOCK_MODBUS=true
+      # - MOCK_MODBUS=true
       - MONGODB_URI=mongodb://db_scada:27017
     depends_on:
       db_scada:

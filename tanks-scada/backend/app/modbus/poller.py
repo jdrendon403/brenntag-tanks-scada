@@ -42,14 +42,15 @@ async def _poll_once() -> None:
         tank_id: int = cfg["tank_id"]
         modbus_cfg = cfg["modbus"]
 
-        height = await modbus_client.read_float32(modbus_cfg["height_register"]) or 0.0
+        # PLC envía altura y overflow en mm → convertir a metros
+        raw_height = await modbus_client.read_float32(modbus_cfg["height_register"])
+        height = (raw_height / 1000.0) if raw_height is not None else 0.0
         # alarm_height en config tiene prioridad sobre el registro Modbus del PLC
         if cfg.get("alarm_height") is not None:
             overflow_limit = float(cfg["alarm_height"])
         else:
-            overflow_limit = await modbus_client.read_float32(modbus_cfg["overflow_register"])
-            if overflow_limit is None:
-                overflow_limit = cfg["max_height"]
+            raw_overflow = await modbus_client.read_float32(modbus_cfg["overflow_register"])
+            overflow_limit = (raw_overflow / 1000.0) if raw_overflow is not None else cfg["max_height"]
         switch_active = await modbus_client.read_bool(modbus_cfg["switch_register"]) or False
 
         height = max(0.0, height)

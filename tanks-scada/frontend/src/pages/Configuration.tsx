@@ -13,7 +13,7 @@ import type { TankConfig, AuditRecord, CalibrationPoint, SensorRange } from '../
 // ---------------------------------------------------------------------------
 type Msg = { ok: boolean; text: string }
 
-const EMPTY_SR: SensorRange = { min_value: 0, max_value: 10, min_register: 0, max_register: 0 }
+const EMPTY_SR: SensorRange = { min_value: 0, max_value: 10000, min_register: 0, max_register: 0 }
 
 // ---------------------------------------------------------------------------
 // Componente principal
@@ -80,9 +80,13 @@ export default function Configuration() {
   async function loadConfig() {
     const data: TankConfig = await getConfig(tankId)
     setCfg(data)
-    setForm({ ...data })
+    setForm({
+      ...data,
+      alarm_height: data.alarm_height != null ? data.alarm_height * 1000 : null,
+    })
     setAlarmOverride(data.alarm_height !== null && data.alarm_height !== undefined)
-    setSrForm(data.sensor_range ?? EMPTY_SR)
+    const sr = data.sensor_range ?? EMPTY_SR
+    setSrForm({ ...sr, min_value: sr.min_value * 1000, max_value: sr.max_value * 1000 })
     setTableEdits([...(data.calibration_table ?? [])])
     setTableChanged(false)
   }
@@ -113,9 +117,9 @@ export default function Configuration() {
         name:         form.name,
         product:      form.product,
         density:      form.density,
-        alarm_height: alarmOverride ? (form.alarm_height ?? null) : null,
+        alarm_height: alarmOverride ? ((form.alarm_height ?? 0) / 1000) : null,
         modbus:       form.modbus,
-        sensor_range: srForm,
+        sensor_range: { ...srForm, min_value: srForm.min_value / 1000, max_value: srForm.max_value / 1000 },
       }
       const updated = await updateConfig(tankId, payload)
       setCfg(updated); setForm({ ...updated })
@@ -319,8 +323,8 @@ export default function Configuration() {
           {alarmOverride && (
             <div className="space-y-2">
               <div className="max-w-xs">
-                <Field label="Altura de alarma (m)" type="number" value={form.alarm_height ?? ''}
-                  onChange={e => setForm(f => ({ ...f, alarm_height: Number(e.target.value) }))} step="0.01" />
+                <Field label="Altura de alarma (mm)" type="number" value={form.alarm_height ?? ''}
+                  onChange={e => setForm(f => ({ ...f, alarm_height: Number(e.target.value) }))} step="1" />
               </div>
               <div className="flex items-center gap-3">
                 <button type="button" disabled={writingOverflow} onClick={handleWriteOverflow}
@@ -355,13 +359,13 @@ export default function Configuration() {
             "Enviar al PLC" escribe los valores a los registros holding configurados.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-            <Field label="Valor mín. (m)" type="number" step="0.001"
+            <Field label="Valor mín. (mm)" type="number" step="1"
               value={srForm.min_value}
               onChange={e => setSrForm(f => ({ ...f, min_value: Number(e.target.value) }))} />
             <Field label="Reg. Modbus mín." type="number"
               value={srForm.min_register}
               onChange={e => setSrForm(f => ({ ...f, min_register: Number(e.target.value) }))} />
-            <Field label="Valor máx. (m)" type="number" step="0.001"
+            <Field label="Valor máx. (mm)" type="number" step="1"
               value={srForm.max_value}
               onChange={e => setSrForm(f => ({ ...f, max_value: Number(e.target.value) }))} />
             <Field label="Reg. Modbus máx." type="number"

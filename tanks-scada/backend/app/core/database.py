@@ -47,8 +47,8 @@ def get_db() -> AsyncIOMotorDatabase:
 
 
 async def _seed_tanks() -> None:
-    """Insert default config for all 13 tanks if collection is empty.
-    If calibration JSON files exist in app/data/calibration/, they are embedded."""
+    """Inserta config por defecto de los 13 tanques si la colección está vacía.
+    Si existen archivos JSON de calibración en app/data/calibration/, se embeben."""
     if await _db.tanks_config.count_documents({}) > 0:
         # Refresh calibration tables from JSON files without touching user config
         for i in range(1, 14):
@@ -60,23 +60,40 @@ async def _seed_tanks() -> None:
                 )
         return
 
+    # Configuración real Brenntag Barranquilla — PLC Modbus FC03, valores en metros
+    _DEFAULTS = [
+        {"tank_id":  1, "name": "TK1",          "product": "Acido Sulfurico",   "density": 1.84, "diameter": 6.0, "max_height": 10.0},
+        {"tank_id":  2, "name": "Aceido Acetico","product": "producto conforme", "density": 0.98, "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  3, "name": "TK3",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  4, "name": "TK4",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  5, "name": "TK5",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  6, "name": "TK6",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  7, "name": "TK7",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  8, "name": "TK8",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id":  9, "name": "TK9",           "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id": 10, "name": "TK10",          "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id": 11, "name": "TK11",          "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id": 12, "name": "TK12",          "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+        {"tank_id": 13, "name": "TK13",          "product": "",                  "density": 1.0,  "diameter": 5.0, "max_height":  8.0},
+    ]
+
     tanks = []
-    for i in range(1, 14):
+    for d in _DEFAULTS:
+        i = d["tank_id"]
         tanks.append({
-            "tank_id": i,
-            "name": f"TK{i}",
-            "product": "",
-            "density": 1.0,
-            "diameter": 5.0,
-            "max_height": 8.0,
+            **d,
+            "alarm_height": 9.0,
             "calibration_table": _load_calibration(i),
             "modbus": {
-                # Altura: Float32, 2 registros consecutivos (FC04)
-                "height_register": 10001 + (i - 1) * 2,
-                # Sobrellenado: Float32, 2 registros consecutivos (FC04)
-                "overflow_register": 10027 + (i - 1) * 2,
-                # Suiche de nivel: Bool, 1 registro (FC02)
-                "switch_register": 30001 + (i - 1),
+                "height_register":   10001 + (i - 1) * 2,   # FC03 holding, Float32
+                "overflow_register": 10301 + (i - 1) * 2,   # FC03 holding, Float32
+                "switch_register":    6001 + (i - 1),        # FC01 coil, Bool
+            },
+            "sensor_range": {
+                "min_value":    0.0,
+                "max_value":   10.0,
+                "min_register": 10101 + (i - 1) * 2,
+                "max_register": 10201 + (i - 1) * 2,
             },
         })
     await _db.tanks_config.insert_many(tanks)
