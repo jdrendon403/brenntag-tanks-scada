@@ -15,7 +15,7 @@ Desarrollo de una aplicación web industrial tipo SCADA para el monitoreo en tie
 
 ## 3. Configuración de Comunicación (Modbus TCP)
 
-El sistema actuará como cliente Modbus TCP. La dirección IP del PLC y el puerto serán configurables desde la interfaz de la aplicación para mayor flexibilidad.
+El sistema actúa como cliente Modbus TCP. La dirección IP del PLC y el puerto son configurables mediante variables de entorno.
 
 ### Tabla de Registros Modbus
 
@@ -23,15 +23,25 @@ El sistema actuará como cliente Modbus TCP. La dirección IP del PLC y el puert
 
 | Variable | Registros | Tipo | FC | Descripción |
 |----------|-----------|------|----|-------------|
-| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | **FC03** | Nivel actual en **mm** (2 regs por tanque) |
-| Sobrellenado TK1–TK13 | 10301–10326 | Float32 ABCD | **FC03** | Límite de sobrellenado en **mm** (2 regs por tanque) |
-| Sensor mín. TK1–TK13 | 10101–10126 | Float32 ABCD | FC03 / FC16 | Rango mínimo del sensor en **mm** |
-| Sensor máx. TK1–TK13 | 10201–10226 | Float32 ABCD | FC03 / FC16 | Rango máximo del sensor en **mm** |
+| Altura TK1–TK13 | 10001–10026 | Float32 | **FC03** | Nivel actual en **mm** (2 regs por tanque) |
+| Sobrellenado TK1–TK13 | 10301–10326 | Float32 | **FC03** | Límite de sobrellenado en **mm** (2 regs por tanque) |
+| Sensor mín. TK1–TK13 | 10101–10126 | Float32 | FC03 / FC16 | Rango mínimo del sensor en **mm** |
+| Sensor máx. TK1–TK13 | 10201–10226 | Float32 | FC03 / FC16 | Rango máximo del sensor en **mm** |
 | SWTk1–SWTk13 | 6001–6013 | Bool | **FC01** | Suiche de nivel físico; dirección = registro − 1 |
-| Alarma 1 | 30014 | Bool | FC01 | Indicador de alarma general 1 |
-| Alarma 2 | 30015 | Bool | FC01 | Indicador de alarma general 2 |
-| **Reset Alarma** | **30016** | **Bool** | **FC05** | **Escritura para silenciar alarmas** |
+| Alarma 1 | configurable (def. 6051) | Bool | FC01 | Indicador de alarma general 1 |
+| Alarma 2 | configurable (def. 6052) | Bool | FC01 | Indicador de alarma general 2 |
+| Reset Alarma | configurable (def. 6053) | Bool | FC05 | Escritura True para silenciar; el PLC resetea a False |
 
+> Los registros de alarma global son configurables desde la pantalla **Alarmas → Registros Modbus** sin necesidad de reiniciar el sistema.
+
+### Orden de palabras Float32
+
+El sistema soporta dos órdenes de bytes para valores Float32:
+
+- **ABCD** (por defecto, `MODBUS_WORD_SWAP=false`): palabra alta primero.
+- **CDAB** (`MODBUS_WORD_SWAP=true`): palabras invertidas para PLCs que usen este orden.
+
+Esta configuración aplica tanto a lecturas (FC03) como a escrituras (FC16).
 
 ## 4. Pantallas de la Aplicación
 
@@ -39,7 +49,7 @@ El sistema actuará como cliente Modbus TCP. La dirección IP del PLC y el puert
 
 - Representación gráfica de los 13 tanques.
 - Datos por tanque: Nombre del producto, Porcentaje (%), Altura de nivel, Peso y Volumen.
-- **Animación de Alarma:** Si un tanque entra en estado de alarma, su icono debe titilar en la pantalla.
+- **Animación de Alarma:** Si un tanque entra en estado de alarma, su icono titila en rojo.
 
 ### 4.2 Pantalla de Detalle de Tanque
 
@@ -50,44 +60,80 @@ El sistema actuará como cliente Modbus TCP. La dirección IP del PLC y el puert
 
 ### 4.3 Pantalla de Configuración
 
-Permite la edición de parámetros críticos. Cada cambio debe registrarse en una tabla de auditoría con fecha y hora.
+Permite la edición de parámetros críticos. Cada cambio se registra en una tabla de auditoría con fecha y hora.
 
-- **Dimensiones:** Diámetro interno y altura del tanque.
-- **Producto:** Nombre del producto y densidad (para cálculos de peso y volumen).
-- **Modbus:** Configuración de registros (Altura, Sobrellenado, Suiche de nivel).
-- **Alarmas:** Altura de alarma de sobrellenado.
-- **Sistema:** Configuración de la dirección IP del PLC.
+- **Unidades de visualización** — mm / cm / m para altura; L / gal US para volumen. Persistidas en `localStorage`.
+- **Producto** — Nombre del tanque y producto almacenado.
+- **Densidad** — kg/L para cálculo de peso.
+- **Alarma de Sobrellenado** — Checkbox para activar override; altura en mm. Botón **"Guardar y enviar al PLC"** guarda en BD y escribe al registro `overflow_register` vía FC16 en un solo paso.
+- **Registros Modbus — Lectura** — Registros de altura, sobrellenado y suiche.
+- **Rango del Sensor de Nivel** — Valores mín/máx en mm + registros holding. Botón **"Guardar y enviar al PLC"** guarda en BD y escribe vía FC16 en un solo paso.
+- **Tabla de Aforo** — Visor/editor con filtro, edición inline, agregar/eliminar filas; carga CSV completa.
+- **Historial de cambios** — Últimas 20 entradas del audit log.
 
 ### 4.4 Pantalla de Consulta Histórica
 
 - Filtros por variable y rango de fechas.
-- Visualización de datos almacenados cada minuto.
+- Visualización de datos almacenados cada 60 segundos.
 
 ### 4.5 Pantalla de Alarmas
 
 - Tabla en orden descendente (más reciente arriba).
-- Campos: Tanque, Origen (Suiche o Altura), Inicio (Fecha/Hora), Reconocimiento (ACK), Finalización.
+- Campos: Tanque, Origen (Suiche o Altura), Inicio, Reconocimiento (ACK), Finalización.
+- Panel colapsable **Registros Modbus** para configurar los registros de Alarma 1, Alarma 2 y Reset desde la interfaz.
+- Botón **Silenciar (Reset PLC)** con feedback visual: `Enviando…` → `✓ Reset enviado` / `✗ Error al resetear`.
 
-## 5. Lógica de Negocio y Control
+## 5. Indicador de Conexión
+
+La barra de navegación muestra dos indicadores independientes en tiempo real:
+
+| Estado | Indicador |
+|--------|-----------|
+| WebSocket caído | 🔴 pulsante **Sin conexión** |
+| WS activo + Modbus conectado | 🟢 **En línea** · 🟢 **PLC** |
+| WS activo + Modbus sin señal | 🟢 **En línea** · 🟠 pulsante **PLC sin señal** |
+
+El estado Modbus (`modbus_connected`) se incluye en cada mensaje WebSocket, sin polling adicional al backend.
+
+## 6. Lógica de Negocio y Control
 
 ### Cálculos Automáticos
 
-- **Volumen:** Basado en diámetro y altura actual.
-- **Peso:** Volumen x Densidad.
-- **Porcentaje:** (Altura Actual / Altura Máxima) * 100.
+Con tabla de aforo cargada (interpolación lineal):
+- **Volumen (L):** interpolación sobre tabla `height_mm → volume_l`.
+- **Porcentaje:** `(volumen / volumen_máximo_tabla) × 100`.
+- **Peso (kg):** `volumen × densidad`.
+
+Sin tabla (fallback fórmula cilíndrica):
+- **Volumen (L):** `π × (diámetro/2)² × altura_m × 1000`.
+- **Porcentaje:** `(altura / max_height) × 100`.
 
 ### Gestión de Alarmas y Datalogger
 
-1. **Datalogger:** Almacenamiento cada 60 segundos de: Nivel, Porcentaje, Peso, Volumen y Estado del suiche de nivel.
-2. **Detección de Alarma:** Se dispara si `Altura > Límite Sobrellenado` O `Suiche de Nivel == True`.
-3. **Notificación Global:** Banner de alarma persistente en todas las pantallas.
-4. **Silenciamiento:** Click derecho sobre el banner para enviar `True` al registro 30016 (Reset Alarma).
+1. **Datalogger:** Almacenamiento cada 60 segundos de: Nivel, Porcentaje, Peso, Volumen y Estado del suiche.
+2. **Detección de Alarma:** Se dispara si `Altura > Límite Sobrellenado` O `Suiche == True`.
+3. **Notificación Global:** Banner de alarma persistente en todas las pantallas con botón **Silenciar**.
+4. **Silenciamiento:** Escribe `True` al registro de reset configurado (FC05). El PLC se encarga de volver a `False`.
+5. **Reconocimiento (ACK):** Marca la alarma en BD sin afectar el estado del PLC.
+6. **Recuperación al arranque:** Las alarmas activas en MongoDB se recuperan al reiniciar el servicio.
 
-## 6. Arquitectura Docker
+### Reset de Alarma
 
-El proyecto se desplegará mediante tres contenedores principales:
+El botón **Silenciar** (banner o pantalla Alarmas):
+1. Envía `True` al coil de reset configurado vía FC05.
+2. Muestra feedback inmediato: `Enviando…` → `✓ Reset enviado` o `✗ Error`.
+3. El PLC es responsable de regresar el coil a `False`.
 
-1. `app_scada`: Contenedor de FastAPI para lógica y Modbus.
-2. `db_scada`: MongoDB para persistencia de datos.
-3. `proxy_web`: (Opcional) Nginx para servir el frontend y asegurar la conexión.
+## 7. Arquitectura Docker
 
+El proyecto se despliega mediante tres contenedores:
+
+1. `app_scada`: FastAPI + PyModbus + lógica de negocio.
+2. `db_scada`: MongoDB para persistencia.
+3. `frontend` (dev) / `proxy_web` (prod): Vite dev server o Nginx sirviendo la SPA.
+
+## 8. Identidad Visual
+
+- **Favicon:** Símbolo B de Brenntag con gradiente púrpura→azul (`public/favicon.svg`).
+- **Logo en navbar:** Logotipo completo Brenntag en blanco, visible sobre fondo oscuro.
+- **Splash screen:** Logo Brenntag grande al iniciar, con opción de entrar en pantalla completa.

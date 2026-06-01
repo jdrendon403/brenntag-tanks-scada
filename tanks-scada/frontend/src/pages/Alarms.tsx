@@ -65,8 +65,19 @@ export default function Alarms() {
     load()
   }
 
+  const [resetStatus, setResetStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
+
   async function doReset() {
-    await resetAlarm()
+    if (resetStatus === 'sending') return
+    setResetStatus('sending')
+    try {
+      const res = await resetAlarm()
+      setResetStatus(res?.success ? 'ok' : 'error')
+    } catch {
+      setResetStatus('error')
+    } finally {
+      setTimeout(() => setResetStatus('idle'), 3000)
+    }
   }
 
   const ids = Array.from({ length: 13 }, (_, i) => i + 1)
@@ -80,9 +91,12 @@ export default function Alarms() {
             className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded text-sm">
             {showConfig ? 'Ocultar config' : 'Registros Modbus'}
           </button>
-          <button onClick={doReset}
-            className="bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm font-medium">
-            Silenciar (Reset PLC)
+          <button onClick={doReset} disabled={resetStatus === 'sending'}
+            className="bg-red-700 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-1.5 rounded text-sm font-medium min-w-[160px]">
+            {resetStatus === 'sending' && 'Enviando…'}
+            {resetStatus === 'ok'      && '✓ Reset enviado'}
+            {resetStatus === 'error'   && '✗ Error al resetear'}
+            {resetStatus === 'idle'    && 'Silenciar (Reset PLC)'}
           </button>
         </div>
       </div>

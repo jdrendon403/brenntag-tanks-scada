@@ -92,4 +92,5 @@ async def _poll_once() -> None:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "tanks": list(tank_states.values()),
             "system_alarms": {"alarm1": alarm1, "alarm2": alarm2},
+            "modbus_connected": modbus_client.is_connected,
         })

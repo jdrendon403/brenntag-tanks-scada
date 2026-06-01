@@ -46,6 +46,7 @@ Editar `.env` según la conexión real:
 | `MOCK_MODBUS` | `true` | `true` = simula el PLC; `false` = conecta al PLC real |
 | `PLC_HOST` | `192.168.1.100` | IP del PLC Modbus TCP |
 | `PLC_PORT` | `502` | Puerto Modbus TCP |
+| `MODBUS_WORD_SWAP` | `false` | `true` = invierte palabras Float32 (CDAB en vez de ABCD) |
 | `MONGODB_URI` | `mongodb://db_scada:27017` | Cadena de conexión MongoDB |
 | `POLLING_INTERVAL` | `1.0` | Segundos entre lecturas Modbus |
 | `AUTH_USER` | `admin` | Usuario para acceso a escritura |
@@ -109,6 +110,7 @@ Editar `.env.prod` y reemplazar los valores marcados:
 ```dotenv
 PLC_HOST=<IP real del PLC>
 MOCK_MODBUS=false
+MODBUS_WORD_SWAP=false
 MONGO_USER=admin
 MONGO_PASSWORD=<contraseña segura>
 MONGODB_URI=mongodb://admin:<contraseña>@db_scada:27017/scada_tanks?authSource=admin
@@ -158,6 +160,8 @@ tanks-scada/
 │       ├── services/           # Calculadora, servicio de alarmas, datalogger
 │       └── data/calibration/   # Tablas de aforo SGS en JSON (tank_N.json)
 └── frontend/
+    ├── public/
+    │   └── favicon.svg         # Favicon — solo el símbolo B de Brenntag
     └── src/
         ├── pages/              # Vista general, detalle, configuración, histórico, alarmas
         ├── components/         # AlarmBanner, TankIcon, LevelBar, LoginModal
@@ -170,15 +174,20 @@ tanks-scada/
 
 | Variable | Registros | Tipo | FC | Notas |
 |----------|-----------|------|----|-------|
-| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | **FC03** | 2 registros por tanque; valor en **mm** |
-| Sobrellenado TK1–TK13 | 10301–10326 | Float32 ABCD | **FC03** | 2 registros por tanque; valor en **mm** |
+| Altura TK1–TK13 | 10001–10026 | Float32 | **FC03** | 2 registros por tanque; valor en **mm** |
+| Sobrellenado TK1–TK13 | 10301–10326 | Float32 | **FC03** | 2 registros por tanque; valor en **mm** |
 | Switch nivel TK1–TK13 | 6001–6013 | Bool | **FC01** | dirección = registro − 1 |
-| Sensor mín. TK1–TK13 | 10101–10126 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
-| Sensor máx. TK1–TK13 | 10201–10226 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
-| Alarma 1 / Alarma 2 | 30014–30015 | Bool | FC01 | Solo lectura |
-| Reset alarma | 30016 | Bool | FC05 | Escritura coil |
+| Sensor mín. TK1–TK13 | 10101–10126 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
+| Sensor máx. TK1–TK13 | 10201–10226 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
+| Alarma 1 | configurable | Bool | FC01 | Por defecto reg 6051 |
+| Alarma 2 | configurable | Bool | FC01 | Por defecto reg 6052 |
+| Reset alarma | configurable | Bool | FC05 | Por defecto reg 6053; solo envía True, el PLC resetea |
 
 > El PLC envía todas las alturas en **milímetros**. El backend convierte a metros internamente. Los registros de configuración (overflow, sensor range) se escriben al PLC también en mm.
+>
+> El orden de palabras Float32 (ABCD o CDAB) se controla con `MODBUS_WORD_SWAP`.
+
+Los registros de alarma global son configurables desde la pantalla **Alarmas → Registros Modbus**.
 
 ---
 
@@ -229,43 +238,19 @@ height_mm,volume_l
 
 Sin tabla cargada, el sistema usa la fórmula cilíndrica como fallback.
 
-### Configurar y enviar rango del sensor al PLC
-
-```bash
-# 1. Guardar rango en DB (min_value y max_value en metros)
-curl -X PUT http://localhost:8000/api/config/tanks/1 \
-  -H "Content-Type: application/json" \
-  -d '{"sensor_range": {"min_value": 0.0, "max_value": 10.0, "min_register": 10101, "max_register": 10201}}'
-
-# 2. Escribir al PLC vía FC16 (el backend convierte m → mm antes de enviar)
-curl -X POST http://localhost:8000/api/config/tanks/1/sensor-range/write
-```
-
-### Enviar límite de sobrellenado al PLC
-
-```bash
-# 1. Configurar altura de alarma en metros (la UI muestra y recibe mm)
-curl -X PUT http://localhost:8000/api/config/tanks/1 \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"alarm_height": 9.0}'
-
-# 2. Escribir al PLC (el backend convierte m → mm antes de enviar vía FC16)
-curl -X POST http://localhost:8000/api/config/tanks/1/overflow-limit/write \
-  -H "Authorization: Bearer <token>"
-```
-
 ---
 
-## Unidades de visualización
+## Indicador de conexión
 
-Seleccionables globalmente desde la pantalla de **Configuración**; se persisten en `localStorage`.
+La barra de navegación muestra dos indicadores independientes:
 
-| Variable | Unidades disponibles | Por defecto |
-|----------|---------------------|-------------|
-| Nivel / Altura | mm, cm, m | cm |
-| Volumen | L, gal (US) | L |
-| Peso | kg | kg (fijo) |
+| Estado | Indicador |
+|--------|-----------|
+| WebSocket caído | 🔴 **Sin conexión** |
+| WS activo + PLC conectado | 🟢 **En línea** · 🟢 **PLC** |
+| WS activo + PLC sin señal | 🟢 **En línea** · 🟠 **PLC sin señal** |
+
+El estado Modbus se transmite en cada mensaje WebSocket (`modbus_connected`), sin polling adicional.
 
 ---
 

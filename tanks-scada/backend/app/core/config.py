@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db: str = "scada_tanks"
     mock_modbus: bool = True
+    modbus_word_swap: bool = False   # True → orden CDAB en vez de ABCD para Float32
     polling_interval: float = 1.0
     log_level: str = "INFO"
     auth_user: str = "admin"

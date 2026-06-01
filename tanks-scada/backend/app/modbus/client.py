@@ -70,7 +70,8 @@ class ModbusClientWrapper:
     # ------------------------------------------------------------------ #
 
     async def read_float32(self, register: int) -> Optional[float]:
-        """Lee un Float32 de 2 holding registers FC03 (dirección 1-based)."""
+        """Lee un Float32 de 2 holding registers FC03 (dirección 1-based).
+        MODBUS_WORD_SWAP=false → ABCD (por defecto); true → CDAB."""
         if settings.mock_modbus:
             return self._mock_float(register)
         if not await self._ensure_connected():
@@ -79,7 +80,10 @@ class ModbusClientWrapper:
             result = await self._client.read_holding_registers(register - 1, count=2, device_id=1)
             if result.isError():
                 return None
-            raw = struct.pack(">HH", result.registers[0], result.registers[1])
+            w0, w1 = result.registers[0], result.registers[1]
+            if settings.modbus_word_swap:
+                w0, w1 = w1, w0
+            raw = struct.pack(">HH", w0, w1)
             return struct.unpack(">f", raw)[0]
         except Exception:
             return None
@@ -101,17 +105,25 @@ class ModbusClientWrapper:
     async def write_coil(self, register: int, value: bool) -> bool:
         """Escribe un coil FC05 (dirección 1-based)."""
         if settings.mock_modbus:
+            logger.debug("MOCK write_coil reg=%d val=%s", register, value)
             return True
         if not await self._ensure_connected():
+            logger.error("write_coil reg=%d: sin conexión Modbus", register)
             return False
         try:
             result = await self._client.write_coil(register - 1, value, device_id=1)
-            return not result.isError()
-        except Exception:
+            if result.isError():
+                logger.error("write_coil reg=%d val=%s → error PLC: %s", register, value, result)
+                return False
+            logger.info("write_coil reg=%d val=%s → OK", register, value)
+            return True
+        except Exception as exc:
+            logger.error("write_coil reg=%d val=%s → excepción: %s", register, value, exc)
             return False
 
     async def write_float32(self, register: int, value: float) -> bool:
-        """FC16: escribe un Float32 Big-Endian en dos holding registers (1-based)."""
+        """FC16: escribe un Float32 en dos holding registers (1-based).
+        MODBUS_WORD_SWAP=false → ABCD; true → CDAB."""
         if settings.mock_modbus:
             logger.debug("MOCK write_float32 reg=%d val=%f", register, value)
             return True
@@ -121,7 +133,8 @@ class ModbusClientWrapper:
             raw = struct.pack(">f", value)
             word_hi = struct.unpack(">H", raw[0:2])[0]
             word_lo = struct.unpack(">H", raw[2:4])[0]
-            result = await self._client.write_registers(register - 1, [word_hi, word_lo], device_id=1)
+            words = [word_lo, word_hi] if settings.modbus_word_swap else [word_hi, word_lo]
+            result = await self._client.write_registers(register - 1, words, device_id=1)
             return not result.isError()
         except Exception as exc:
             logger.error("write_float32 error reg=%d: %s", register, exc)

@@ -30,13 +30,13 @@ export default function Configuration() {
   const [saving, setSaving]           = useState(false)
   const [msg, setMsg]                 = useState<Msg | null>(null)
 
-  // -- Escritura al PLC — rango sensor
-  const [writingPLC, setWritingPLC]   = useState(false)
-  const [plcMsg, setPlcMsg]           = useState<Msg | null>(null)
+  // -- Guardar + escribir al PLC — rango sensor
+  const [sensorSaving, setSensorSaving] = useState(false)
+  const [plcMsg, setPlcMsg]             = useState<Msg | null>(null)
 
-  // -- Escritura al PLC — límite sobrellenado
-  const [writingOverflow, setWritingOverflow] = useState(false)
-  const [overflowMsg, setOverflowMsg]         = useState<Msg | null>(null)
+  // -- Guardar + escribir al PLC — límite sobrellenado
+  const [overflowSaving, setOverflowSaving] = useState(false)
+  const [overflowMsg, setOverflowMsg]       = useState<Msg | null>(null)
 
   // -- Tabla de aforo — editor
   const [tableEdits, setTableEdits]   = useState<CalibrationPoint[]>([])
@@ -113,17 +113,13 @@ export default function Configuration() {
     e.preventDefault()
     setSaving(true); setMsg(null)
     try {
-      const payload: Partial<TankConfig> = {
-        name:         form.name,
-        product:      form.product,
-        density:      form.density,
-        alarm_height: alarmOverride ? ((form.alarm_height ?? 0) / 1000) : null,
-        modbus:       form.modbus,
-        sensor_range: { ...srForm, min_value: srForm.min_value / 1000, max_value: srForm.max_value / 1000 },
-      }
-      const updated = await updateConfig(tankId, payload)
-      setCfg(updated); setForm({ ...updated })
-      setSrForm(updated.sensor_range ?? EMPTY_SR)
+      await updateConfig(tankId, {
+        name:    form.name,
+        product: form.product,
+        density: form.density,
+        modbus:  form.modbus,
+      })
+      await loadConfig()
       setMsg({ ok: true, text: 'Configuración guardada correctamente' })
       loadAudit()
     } catch {
@@ -134,34 +130,47 @@ export default function Configuration() {
   }
 
   // ---------------------------------------------------------------------------
-  // Límite de sobrellenado → PLC
+  // Límite de sobrellenado: guardar en DB y escribir al PLC
   // ---------------------------------------------------------------------------
-  async function handleWriteOverflow() {
-    setWritingOverflow(true); setOverflowMsg(null)
+  async function handleSaveAndWriteOverflow() {
+    setOverflowSaving(true); setOverflowMsg(null)
     try {
-      await writeOverflowLimit(tankId)
-      setOverflowMsg({ ok: true, text: 'Límite enviado al PLC correctamente' })
+      await updateConfig(tankId, {
+        alarm_height: alarmOverride ? ((form.alarm_height ?? 0) / 1000) : null,
+      })
+      if (alarmOverride) {
+        const res = await writeOverflowLimit(tankId)
+        setOverflowMsg({ ok: res.ok, text: res.ok ? 'Guardado y enviado al PLC' : 'Guardado en BD, error al enviar al PLC' })
+      } else {
+        setOverflowMsg({ ok: true, text: 'Umbral desactivado y guardado' })
+      }
+      await loadConfig()
       loadAudit()
     } catch {
-      setOverflowMsg({ ok: false, text: 'Error al comunicar con el PLC' })
+      setOverflowMsg({ ok: false, text: 'Error al guardar o enviar al PLC' })
     } finally {
-      setWritingOverflow(false)
+      setOverflowSaving(false)
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Rango del sensor → PLC
+  // Rango del sensor: guardar en DB y escribir al PLC
   // ---------------------------------------------------------------------------
-  async function handleWritePLC() {
-    setWritingPLC(true); setPlcMsg(null)
+  async function handleSaveAndWriteSensorRange() {
+    setSensorSaving(true); setPlcMsg(null)
     try {
-      await writeSensorRange(tankId)
-      setPlcMsg({ ok: true, text: 'Valores enviados al PLC correctamente' })
+      await updateConfig(tankId, {
+        sensor_range: { ...srForm, min_value: srForm.min_value / 1000, max_value: srForm.max_value / 1000 },
+      })
+      const res = await writeSensorRange(tankId)
+      setPlcMsg({ ok: res.ok, text: res.ok ? 'Guardado y enviado al PLC' : 'Guardado en BD, error al enviar al PLC' })
+      await loadConfig()
       loadAudit()
     } catch {
-      setPlcMsg({ ok: false, text: 'Error al comunicar con el PLC. Verifique la conexión.' })
+      setPlcMsg({ ok: false, text: 'Error al guardar o enviar al PLC' })
     } finally {
-      setWritingPLC(false) }
+      setSensorSaving(false)
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -321,24 +330,22 @@ export default function Configuration() {
             Usar umbral personalizado (override valor del PLC)
           </label>
           {alarmOverride && (
-            <div className="space-y-2">
-              <div className="max-w-xs">
-                <Field label="Altura de alarma (mm)" type="number" value={form.alarm_height ?? ''}
-                  onChange={e => setForm(f => ({ ...f, alarm_height: Number(e.target.value) }))} step="1" />
-              </div>
-              <div className="flex items-center gap-3">
-                <button type="button" disabled={writingOverflow} onClick={handleWriteOverflow}
-                  className="px-3 py-1.5 text-sm bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded font-medium">
-                  {writingOverflow ? 'Enviando…' : 'Enviar al PLC'}
-                </button>
-                {overflowMsg && (
-                  <span className={`text-sm ${overflowMsg.ok ? 'text-green-400' : 'text-red-400'}`}>
-                    {overflowMsg.text}
-                  </span>
-                )}
-              </div>
+            <div className="max-w-xs">
+              <Field label="Altura de alarma (mm)" type="number" value={form.alarm_height ?? ''}
+                onChange={e => setForm(f => ({ ...f, alarm_height: Number(e.target.value) }))} step="1" />
             </div>
           )}
+          <div className="flex items-center gap-3 mt-2">
+            <button type="button" disabled={overflowSaving} onClick={handleSaveAndWriteOverflow}
+              className="px-3 py-1.5 text-sm bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded font-medium">
+              {overflowSaving ? 'Guardando…' : 'Guardar y enviar al PLC'}
+            </button>
+            {overflowMsg && (
+              <span className={`text-sm ${overflowMsg.ok ? 'text-green-400' : 'text-red-400'}`}>
+                {overflowMsg.text}
+              </span>
+            )}
+          </div>
         </section>
 
         {/* Registros Modbus de lectura */}
@@ -354,10 +361,6 @@ export default function Configuration() {
         {/* Rango del sensor */}
         <section>
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Rango del Sensor de Nivel</h2>
-          <p className="text-xs text-slate-500 mb-3">
-            Rango de la señal analógica del sensor. Guardar actualiza la base de datos;
-            "Enviar al PLC" escribe los valores a los registros holding configurados.
-          </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             <Field label="Valor mín. (mm)" type="number" step="1"
               value={srForm.min_value}
@@ -372,14 +375,15 @@ export default function Configuration() {
               value={srForm.max_register}
               onChange={e => setSrForm(f => ({ ...f, max_register: Number(e.target.value) }))} />
           </div>
-          <button type="button" disabled={writingPLC}
-            onClick={handleWritePLC}
-            className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white px-4 py-1.5 rounded text-sm font-medium">
-            {writingPLC ? 'Enviando…' : 'Enviar al PLC'}
-          </button>
-          {plcMsg && (
-            <p className={`text-sm font-medium mt-2 ${plcMsg.ok ? 'text-green-400' : 'text-red-400'}`}>{plcMsg.text}</p>
-          )}
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={sensorSaving} onClick={handleSaveAndWriteSensorRange}
+              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white px-4 py-1.5 rounded text-sm font-medium">
+              {sensorSaving ? 'Guardando…' : 'Guardar y enviar al PLC'}
+            </button>
+            {plcMsg && (
+              <span className={`text-sm font-medium ${plcMsg.ok ? 'text-green-400' : 'text-red-400'}`}>{plcMsg.text}</span>
+            )}
+          </div>
         </section>
 
         {msg && (

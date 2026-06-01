@@ -17,12 +17,12 @@ Tanks/
     │   ├── app/
     │   │   ├── main.py             # FastAPI lifespan + routers
     │   │   ├── core/
-    │   │   │   ├── config.py       # Pydantic Settings (lee .env); incluye AUTH_*
-    │   │   │   ├── database.py     # Motor async + seed 13 tanques + carga tablas de aforo
+    │   │   │   ├── config.py       # Pydantic Settings (lee .env); incluye AUTH_* y MODBUS_WORD_SWAP
+    │   │   │   ├── database.py     # Motor async + seed 13 tanques + carga tablas de aforo + seed alarm_config
     │   │   │   └── security.py     # create_token() + dependencia require_auth (JWT HS256)
     │   │   ├── modbus/
-    │   │   │   ├── client.py       # ModbusClientWrapper (real + mock)
-    │   │   │   └── poller.py       # Loop asyncio cada 1 s; publica al WS
+    │   │   │   ├── client.py       # ModbusClientWrapper (real + mock); reconexión automática; WORD_SWAP
+    │   │   │   └── poller.py       # Loop asyncio cada 1 s; publica modbus_connected al WS
     │   │   ├── models/
     │   │   │   ├── tank.py         # TankConfig, TankState, TankConfigUpdate, SensorRange
     │   │   │   ├── alarm.py        # AlarmRecord
@@ -31,37 +31,41 @@ Tanks/
     │   │   │   ├── auth.py         # POST /api/auth/login
     │   │   │   ├── tanks.py        # GET /api/tanks/, GET /api/tanks/{id}
     │   │   │   ├── config.py       # config CRUD + calibración CSV + escritura PLC (protegidos)
-    │   │   │   ├── alarms.py       # GET /api/alarms/, PATCH /{id}/ack*, POST /reset* (*auth)
+    │   │   │   ├── alarms.py       # GET /api/alarms/, PATCH /{id}/ack*, POST /reset*, GET+PUT /config* (*auth)
     │   │   │   ├── history.py      # GET /api/history/
     │   │   │   └── websocket.py    # WS /ws/live + WebSocketManager
     │   │   ├── services/
     │   │   │   ├── calculator.py   # volumen (tabla o fórmula) / peso / porcentaje
-    │   │   │   ├── alarm_service.py# detección, ACK, reset, recuperación al arranque
+    │   │   │   ├── alarm_service.py# detección, ACK, reset (solo True), recuperación al arranque
     │   │   │   └── datalogger.py   # snapshot MongoDB cada 60 s
     │   │   └── data/calibration/   # Tablas de aforo SGS: tank_N.json
     │   ├── requirements.txt
     │   ├── Dockerfile
     │   └── .env                    # desarrollo local (no commitear en prod)
     └── frontend/
+        ├── public/
+        │   └── favicon.svg         # Símbolo B de Brenntag (gradiente púrpura→azul)
         ├── src/
         │   ├── api/client.ts       # axios, URLs relativas (proxy Vite/Nginx)
         │   ├── hooks/useWebSocket.ts
         │   ├── context/
-        │   │   ├── TankDataContext.tsx  # estado global WebSocket
+        │   │   ├── TankDataContext.tsx  # estado global WS; expone wsConnected + modbusConnected
         │   │   ├── UnitContext.tsx      # unidades de visualización globales (localStorage)
         │   │   └── AuthContext.tsx      # token JWT en sessionStorage + interceptores axios
         │   ├── utils/units.ts      # conversión y formateo: altura, volumen
         │   ├── components/
-        │   │   ├── AlarmBanner.tsx
+        │   │   ├── AlarmBanner.tsx  # botón Silenciar con feedback visual
         │   │   ├── TankIcon.tsx
         │   │   ├── LevelBar.tsx
         │   │   └── LoginModal.tsx  # modal overlay aparece automáticamente en 401
         │   └── pages/
         │       ├── GeneralView.tsx
         │       ├── TankDetail.tsx
-        │       ├── Configuration.tsx
+        │       ├── Configuration.tsx  # botones "Guardar y enviar al PLC" unificados
         │       ├── History.tsx
-        │       └── Alarms.tsx
+        │       └── Alarms.tsx         # panel Registros Modbus configurable
+        ├── imagens/
+        │   └── brenntaglogo.svg    # Logo original Brenntag (fuente para logo y favicon)
         ├── vite.config.ts          # proxy /api y /ws → app_scada:8000
         ├── tailwind.config.js
         ├── nginx.conf              # producción: sirve SPA + proxy API/WS
@@ -103,20 +107,20 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 ```
 
 > **Nota:** prod usa un volumen `mongo_data_prod` separado del volumen de desarrollo `mongo_data`.
-> Si es la primera vez, MongoDB crea las credenciales automáticamente desde `MONGO_USER/MONGO_PASSWORD`.
 
 ### Variables clave en `.env.example`
 
-| Variable          | Por defecto              | Descripción                              |
-|-------------------|--------------------------|------------------------------------------|
-| `MOCK_MODBUS`     | `true`                   | Simula PLC; `false` = conecta al PLC real |
-| `PLC_HOST`        | `192.168.1.100`          | IP del PLC real                          |
-| `PLC_PORT`        | `502`                    | Puerto Modbus TCP                        |
-| `MONGODB_URI`     | `mongodb://db_scada:27017` | Cadena de conexión MongoDB             |
-| `POLLING_INTERVAL`| `1.0`                    | Segundos entre lecturas Modbus           |
-| `AUTH_USER`       | `admin`                  | Usuario para acceso a escritura          |
-| `AUTH_PASSWORD`   | `scada1234`              | Contraseña (**cambiar en producción**)   |
-| `AUTH_SECRET`     | `cambia-este-secreto`    | Clave secreta JWT (**cambiar en producción**) |
+| Variable | Por defecto | Descripción |
+|----------|-------------|-------------|
+| `MOCK_MODBUS` | `true` | Simula PLC; `false` = conecta al PLC real |
+| `PLC_HOST` | `192.168.1.100` | IP del PLC real |
+| `PLC_PORT` | `502` | Puerto Modbus TCP |
+| `MODBUS_WORD_SWAP` | `false` | `true` = orden CDAB para Float32 (segundo PLC) |
+| `MONGODB_URI` | `mongodb://db_scada:27017` | Cadena de conexión MongoDB |
+| `POLLING_INTERVAL` | `1.0` | Segundos entre lecturas Modbus |
+| `AUTH_USER` | `admin` | Usuario para acceso a escritura |
+| `AUTH_PASSWORD` | `scada1234` | Contraseña (**cambiar en producción**) |
+| `AUTH_SECRET` | `cambia-este-secreto` | Clave secreta JWT (**cambiar en producción**) |
 
 ---
 
@@ -131,15 +135,17 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 | `GET`  | `/api/config/tanks/{id}` | Configuración de un tanque |
 | `PUT`  | `/api/config/tanks/{id}` | Actualizar configuración (guarda auditoría) |
 | `POST` | `/api/config/tanks/{id}/calibration` | Subir tabla de aforo desde CSV |
-| `POST` | `/api/config/tanks/{id}/sensor-range/write` | Enviar rango del sensor al PLC (FC16) |
-| `POST` | `/api/config/tanks/{id}/overflow-limit/write` | Enviar límite sobrellenado al PLC (FC16) |
+| `POST` | `/api/config/tanks/{id}/sensor-range/write` | Guardar y enviar rango del sensor al PLC (FC16) |
+| `POST` | `/api/config/tanks/{id}/overflow-limit/write` | Guardar y enviar límite sobrellenado al PLC (FC16) |
 | `GET`  | `/api/config/plc` | Info de conexión PLC (host, puerto, modo mock) |
 | `GET`  | `/api/config/audit` | Log de cambios de configuración |
 | `GET`  | `/api/alarms/` | Listado de alarmas (filtros: `active_only`, `tank_id`) |
 | `PATCH`| `/api/alarms/{id}/ack` | Reconocer alarma (ACK) |
-| `POST` | `/api/alarms/reset` | Escribir `True` al registro Modbus 30016 |
+| `POST` | `/api/alarms/reset` | Escribe True al registro de reset configurado (FC05) |
+| `GET`  | `/api/alarms/config` | Lee registros Modbus de alarma global |
+| `PUT`  | `/api/alarms/config` | Actualiza registros Modbus de alarma global |
 | `GET`  | `/api/history/` | Histórico (filtros: `tank_id`, `from`, `to`, `limit`) |
-| `WS`   | `/ws/live` | Stream en tiempo real de todos los tanques (1 msg/s) |
+| `WS`   | `/ws/live` | Stream en tiempo real; incluye `modbus_connected` |
 
 ---
 
@@ -149,16 +155,17 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 
 | Variable | Registros | Tipo | FC | Notas |
 |----------|-----------|------|----|-------|
-| Altura TK1–TK13 | 10001–10026 | Float32 ABCD | **FC03** | 2 regs por tanque; valor en mm |
-| Sobrellenado TK1–TK13 | 10301–10326 | Float32 ABCD | **FC03** | 2 regs por tanque; valor en mm |
-| Sensor mín. TK1–TK13 | 10101–10126 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
-| Sensor máx. TK1–TK13 | 10201–10226 | Float32 ABCD | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
+| Altura TK1–TK13 | 10001–10026 | Float32 | **FC03** | 2 regs por tanque; valor en mm |
+| Sobrellenado TK1–TK13 | 10301–10326 | Float32 | **FC03** | 2 regs por tanque; valor en mm |
+| Sensor mín. TK1–TK13 | 10101–10126 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
+| Sensor máx. TK1–TK13 | 10201–10226 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
 | SWTk1–SWTk13 | 6001–6013 | Bool | **FC01** | dirección = registro − 1 |
-| Alarma 1 | 30014 | Bool | FC01 | Solo lectura |
-| Alarma 2 | 30015 | Bool | FC01 | Solo lectura |
-| Reset Alarma | 30016 | Bool | FC05 | Escritura coil |
+| Alarma 1 | configurable (def. 6051) | Bool | FC01 | Solo lectura; configurable desde UI |
+| Alarma 2 | configurable (def. 6052) | Bool | FC01 | Solo lectura; configurable desde UI |
+| Reset Alarma | configurable (def. 6053) | Bool | FC05 | Solo envía True; el PLC resetea a False |
 
-Todos los registros son configurables por tanque en MongoDB (`tanks_config.modbus`).
+Todos los registros por tanque son configurables en MongoDB (`tanks_config.modbus`).
+Los registros de alarma global se guardan en la colección `alarm_config`.
 
 ---
 
@@ -195,6 +202,16 @@ alarma = (altura_m > overflow_limit_m) OR (suiche == True)
 - Al resolver: actualiza `end_time` y `active=False`.
 - Al arrancar: recupera alarmas activas de MongoDB para no perder estado tras reinicio.
 
+### Reset de alarma
+- `POST /api/alarms/reset` escribe `True` al registro de reset configurado vía FC05.
+- El PLC es responsable de regresar el coil a `False`.
+- El endpoint devuelve `{"success": bool}` y el frontend muestra feedback inmediato.
+
+### Modbus word swap (client.py)
+- `MODBUS_WORD_SWAP=false` (defecto): Float32 orden ABCD — `struct.pack(">HH", w0, w1)`.
+- `MODBUS_WORD_SWAP=true`: Float32 orden CDAB — palabras intercambiadas antes de empaquetar.
+- Aplica a `read_float32` y `write_float32`.
+
 ### Datalogger (services/datalogger.py)
 Guarda snapshot de todos los tanques en la colección `history` cada 60 segundos.
 
@@ -208,9 +225,10 @@ Guarda snapshot de todos los tanques en la colección `history` cada 60 segundos
 | Detalle | `/tank/:id` | 3 barras verticales + gráfico histórico recharts; selector de variable |
 | Configuración | `/config?tank=N` | Producto, densidad, Modbus, sensor range, tabla de aforo editable, alarma |
 | Histórico | `/history` | Filtros fecha/variable; gráfico + tabla; máx 1440 registros |
-| Alarmas | `/alarms` | Tabla con ACK, filtros; botón Reset PLC |
+| Alarmas | `/alarms` | Tabla con ACK, filtros; botón Silenciar; panel Registros Modbus configurable |
 
-**AlarmBanner**: visible en todas las rutas cuando hay alarma activa. Click derecho → reset Modbus.  
+**Indicador de conexión**: dos indicadores en la navbar — WebSocket (servidor) y Modbus (PLC).  
+**AlarmBanner**: botón Silenciar con feedback visual; click derecho también dispara el reset.  
 **WebSocket**: reconexión automática cada 3 s si cae la conexión.
 
 ### Unidades de visualización (UnitContext)
@@ -228,11 +246,19 @@ Seleccionables globalmente desde la pantalla de Configuración; se persisten en 
 - **Unidades de visualización** — selector global (borde índigo).
 - **Producto** — nombre y producto del tanque.
 - **Propiedades del producto** — densidad (kg/L).
-- **Alarma de Sobrellenado** — checkbox para activar override; campo altura en **mm**; botón **"Enviar al PLC"** (naranja) escribe al `overflow_register` vía FC16 (convierte mm→m en BD, m→mm al PLC).
+- **Alarma de Sobrellenado** — checkbox para activar override; campo altura en **mm**; botón **"Guardar y enviar al PLC"** (naranja) guarda en BD y escribe al `overflow_register` vía FC16 en un solo paso.
 - **Registros Modbus — Lectura** — height, overflow, switch registers.
-- **Rango del Sensor de Nivel** — min/max en **mm** + registros holding; botón **"Enviar al PLC"** (ámbar) escribe vía FC16 (misma conversión mm↔m).
+- **Rango del Sensor de Nivel** — min/max en **mm** + registros holding; botón **"Guardar y enviar al PLC"** (ámbar) guarda en BD y escribe vía FC16 en un solo paso.
 - **Tabla de Aforo** — visor/editor con filtro, edición inline, agregar/eliminar filas; carga CSV completa.
 - **Historial de cambios** — últimas 20 entradas del audit log.
+
+> **Nota UI:** los valores de altura se muestran y editan siempre en **mm** en los formularios de configuración. La BD almacena en metros. La conversión ×1000 / ÷1000 se aplica al cargar y al guardar.
+
+### Identidad visual
+
+- **Favicon:** `/public/favicon.svg` — símbolo B de Brenntag con gradiente púrpura→azul.
+- **Logo navbar:** logotipo completo Brenntag inline SVG; texto en blanco para visibilidad sobre fondo oscuro.
+- **Splash screen:** logo Brenntag a 48 px con opción de entrar en pantalla completa.
 
 ---
 
@@ -247,6 +273,7 @@ Seleccionables globalmente desde la pantalla de Configuración; se persisten en 
 - **Fase 7** ✅ Unidades de visualización: mm/cm/m + L/gal, UnitContext global
 - **Fase 8** ✅ Rango de sensor + límite sobrellenado escritura al PLC (FC16); corrección FC01 suiche
 - **Fase 9** ✅ Integración PLC real: FC03 holding registers, conversión mm↔m, seed con registros reales, UI configuración en mm
+- **Fase 10** ✅ Mejoras operativas: indicador WS+PLC dual, MODBUS_WORD_SWAP, reset alarma con feedback, botones "Guardar y enviar al PLC" unificados, logo Brenntag + favicon
 
 ---
 
@@ -277,11 +304,14 @@ curl -X PUT http://localhost:8000/api/config/tanks/3 \
 curl -X POST http://localhost:8000/api/config/tanks/1/calibration \
   -F "file=@tabla_tk1.csv"
 
-# Enviar rango del sensor al PLC (requiere sensor_range configurado)
-curl -X POST http://localhost:8000/api/config/tanks/1/sensor-range/write
+# Leer configuración de registros de alarma global
+curl http://localhost:8000/api/alarms/config
 
-# Enviar límite de sobrellenado al PLC (requiere alarm_height configurado)
-curl -X POST http://localhost:8000/api/config/tanks/1/overflow-limit/write
+# Actualizar registros de alarma global
+curl -X PUT http://localhost:8000/api/alarms/config \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"alarm1_register": 6051, "alarm2_register": 6052, "reset_register": 6053}'
 
 # Conectar WebSocket manualmente
 wscat -c ws://localhost:8000/ws/live

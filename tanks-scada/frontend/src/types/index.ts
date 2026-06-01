@@ -72,4 +72,6 @@ export interface AuditRecord {
 export interface WSMessage {
   timestamp: string
   tanks: TankState[]
+  system_alarms?: { alarm1: boolean; alarm2: boolean }
+  modbus_connected?: boolean
 }
