@@ -3,12 +3,19 @@ from typing import Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from ..core.database import get_db
 from ..core.security import require_auth
 from ..services.alarm_service import ack_alarm, reset_alarm
 
 router = APIRouter(prefix="/api/alarms", tags=["alarms"])
+
+
+class AlarmConfigUpdate(BaseModel):
+    alarm1_register: int
+    alarm2_register: int
+    reset_register: int
 
 
 def _serialize(doc: dict) -> dict:
@@ -45,6 +52,21 @@ async def acknowledge_alarm(alarm_id: str, _: str = Depends(require_auth)):
     if not modified:
         raise HTTPException(status_code=404, detail="Alarma no encontrada o ya reconocida")
     return {"success": True, "ack_time": datetime.now(timezone.utc).isoformat()}
+
+
+@router.get("/config")
+async def get_alarm_config():
+    db = get_db()
+    cfg = await db.alarm_config.find_one({}, {"_id": 0})
+    return cfg or {"alarm1_register": 6051, "alarm2_register": 6052, "reset_register": 6053}
+
+
+@router.put("/config")
+async def update_alarm_config(body: AlarmConfigUpdate, _: str = Depends(require_auth)):
+    db = get_db()
+    data = body.model_dump()
+    await db.alarm_config.update_one({}, {"$set": data}, upsert=True)
+    return data
 
 
 @router.post("/reset")

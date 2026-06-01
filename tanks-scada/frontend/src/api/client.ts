@@ -16,10 +16,14 @@ export const getAuditLog   = (tankId?: number, limit = 100) =>
   api.get('/api/config/audit', { params: { tank_id: tankId, limit } }).then(r => r.data as AuditRecord[])
 
 // Alarms
-export const getAlarms  = (params?: { active_only?: boolean; tank_id?: number; limit?: number }) =>
+export const getAlarms      = (params?: { active_only?: boolean; tank_id?: number; limit?: number }) =>
   api.get('/api/alarms/', { params }).then(r => r.data as AlarmRecord[])
-export const ackAlarm   = (id: string) => api.patch(`/api/alarms/${id}/ack`).then(r => r.data)
-export const resetAlarm = () => api.post('/api/alarms/reset').then(r => r.data)
+export const ackAlarm       = (id: string) => api.patch(`/api/alarms/${id}/ack`).then(r => r.data)
+export const resetAlarm     = () => api.post('/api/alarms/reset').then(r => r.data)
+export const getAlarmConfig = () =>
+  api.get('/api/alarms/config').then(r => r.data as { alarm1_register: number; alarm2_register: number; reset_register: number })
+export const updateAlarmConfig = (data: { alarm1_register: number; alarm2_register: number; reset_register: number }) =>
+  api.put('/api/alarms/config', data).then(r => r.data)
 
 // History
 export const getHistory = (params: { tank_id?: number; from?: string; to?: string; limit?: number }) =>

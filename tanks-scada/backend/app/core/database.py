@@ -31,6 +31,7 @@ async def connect_db() -> None:
     await _db.alarms.create_index("active")
     await _db.audit_log.create_index([("tank_id", 1), ("timestamp", -1)])
     await _seed_tanks()
+    await _seed_alarm_config()
     # Recuperar alarmas activas en memoria tras arranque
     from ..services.alarm_service import initialize as init_alarms
     await init_alarms(_db)
@@ -97,3 +98,13 @@ async def _seed_tanks() -> None:
             },
         })
     await _db.tanks_config.insert_many(tanks)
+
+
+async def _seed_alarm_config() -> None:
+    """Inserta configuración de registros de alarma global si no existe."""
+    if await _db.alarm_config.count_documents({}) == 0:
+        await _db.alarm_config.insert_one({
+            "alarm1_register": 6051,   # FC01 coil — Alarma general 1
+            "alarm2_register": 6052,   # FC01 coil — Alarma general 2
+            "reset_register":  6053,   # FC05 coil — Reset alarma
+        })

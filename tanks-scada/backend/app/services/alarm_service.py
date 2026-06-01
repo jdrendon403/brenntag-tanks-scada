@@ -60,6 +60,8 @@ async def ack_alarm(alarm_id: str, db) -> bool:
 
 
 async def reset_alarm(db) -> bool:
-    """Envía True al registro 30016 (Reset Alarma) vía Modbus."""
+    """Envía True al registro de reset configurado en DB vía Modbus FC05."""
     from ..modbus.client import modbus_client
-    return await modbus_client.write_coil(30016, True)
+    cfg = await db.alarm_config.find_one({}, {"_id": 0})
+    register = cfg["reset_register"] if cfg else 6053
+    return await modbus_client.write_coil(register, True)
