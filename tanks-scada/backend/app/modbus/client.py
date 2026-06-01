@@ -11,13 +11,14 @@ logger = logging.getLogger(__name__)
 
 class ModbusClientWrapper:
     """
-    Wrapper async sobre pymodbus.
+    Wrapper async sobre pymodbus con reconexión automática.
     Con MOCK_MODBUS=true genera datos simulados sin conectar al PLC.
 
-    Convención de registros (dirección 1-based, igual que en la documentación):
-      - Float32: FC04 read_input_registers, 2 words, orden Big-Endian (ABCD).
-      - Bool:    FC01 read_coils (registro 30xxx → dirección = reg - 30001).
-      - Coil:    FC05 write_coil (reset alarma).
+    Convención de registros (dirección 1-based):
+      - Float32: FC03 read_holding_registers, 2 words, Big-Endian ABCD.
+      - Bool:    FC01 read_coils, dirección = register - 1.
+      - Coil:    FC05 write_coil.
+      - Float32 write: FC16 write_registers.
     """
 
     def __init__(self) -> None:
@@ -28,9 +29,7 @@ class ModbusClientWrapper:
         if settings.mock_modbus:
             self._connected = True
             return
-        # Import lazy: pymodbus solo es necesario en modo real
         from pymodbus.client import AsyncModbusTcpClient
-
         self._client = AsyncModbusTcpClient(settings.plc_host, port=settings.plc_port)
         await self._client.connect()
         self._connected = self._client.connected
@@ -42,16 +41,40 @@ class ModbusClientWrapper:
 
     @property
     def is_connected(self) -> bool:
-        return self._connected
+        if settings.mock_modbus:
+            return self._connected
+        return bool(self._client and self._client.connected)
+
+    async def _ensure_connected(self) -> bool:
+        """Verifica la conexión real y reconecta si es necesario."""
+        if self._client and self._client.connected:
+            return True
+        logger.warning("Modbus desconectado — reconectando a %s:%s…", settings.plc_host, settings.plc_port)
+        try:
+            from pymodbus.client import AsyncModbusTcpClient
+            if self._client:
+                self._client.close()
+            self._client = AsyncModbusTcpClient(settings.plc_host, port=settings.plc_port)
+            await self._client.connect()
+            if self._client.connected:
+                logger.info("Reconexión Modbus exitosa")
+                return True
+            logger.error("Reconexión Modbus fallida — PLC no responde")
+            return False
+        except Exception as exc:
+            logger.error("Error en reconexión Modbus: %s", exc)
+            return False
 
     # ------------------------------------------------------------------ #
     #  API pública                                                         #
     # ------------------------------------------------------------------ #
 
     async def read_float32(self, register: int) -> Optional[float]:
-        """Lee un Float32 de 2 holding registers consecutivos FC03 (dirección 1-based)."""
+        """Lee un Float32 de 2 holding registers FC03 (dirección 1-based)."""
         if settings.mock_modbus:
             return self._mock_float(register)
+        if not await self._ensure_connected():
+            return None
         try:
             result = await self._client.read_holding_registers(register - 1, count=2, device_id=1)
             if result.isError():
@@ -65,6 +88,8 @@ class ModbusClientWrapper:
         """Lee un coil FC01 (dirección 1-based → 0-based = register - 1)."""
         if settings.mock_modbus:
             return self._mock_bool(register)
+        if not await self._ensure_connected():
+            return None
         try:
             result = await self._client.read_coils(register - 1, count=1, device_id=1)
             if result.isError():
@@ -74,9 +99,11 @@ class ModbusClientWrapper:
             return None
 
     async def write_coil(self, register: int, value: bool) -> bool:
-        """Escribe un coil FC05 (dirección 1-based). Retorna True si tuvo éxito."""
+        """Escribe un coil FC05 (dirección 1-based)."""
         if settings.mock_modbus:
             return True
+        if not await self._ensure_connected():
+            return False
         try:
             result = await self._client.write_coil(register - 1, value, device_id=1)
             return not result.isError()
@@ -84,10 +111,12 @@ class ModbusClientWrapper:
             return False
 
     async def write_float32(self, register: int, value: float) -> bool:
-        """FC16: escribe un Float32 Big-Endian en dos holding registers consecutivos (1-based)."""
+        """FC16: escribe un Float32 Big-Endian en dos holding registers (1-based)."""
         if settings.mock_modbus:
             logger.debug("MOCK write_float32 reg=%d val=%f", register, value)
             return True
+        if not await self._ensure_connected():
+            return False
         try:
             raw = struct.pack(">f", value)
             word_hi = struct.unpack(">H", raw[0:2])[0]
