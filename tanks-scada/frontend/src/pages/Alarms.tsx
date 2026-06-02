@@ -5,8 +5,10 @@ import type { AlarmRecord } from '../types'
 
 type AlarmConfig = { alarm1_register: number; alarm2_register: number; reset_register: number }
 
+const TZ = 'America/Bogota'
+
 const fmtDt = (s: string | null) =>
-  s ? new Date(s).toLocaleString('es-CO') : '—'
+  s ? new Date(s).toLocaleString('es-CO', { timeZone: TZ }) : '—'
 
 function Badge({ active, ack }: { active: boolean; ack: string | null }) {
   if (active && !ack) return <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">ACTIVA</span>

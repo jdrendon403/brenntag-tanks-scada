@@ -7,8 +7,20 @@ import type { HistoryRecord } from '../types'
 
 type Variable = 'height' | 'percentage' | 'volume' | 'weight'
 
+const TZ = 'America/Bogota'
+
 function isoLocal(d: Date) {
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  // Convierte a hora local de Colombia para los inputs datetime-local
+  return new Date(d.toLocaleString('en-CA', { timeZone: TZ }).replace(', ', 'T').slice(0, 16))
+    .toISOString().slice(0, 16)
+}
+
+function fmtCO(ts: string) {
+  return new Date(ts).toLocaleString('es-CO', { timeZone: TZ })
+}
+
+function fmtTimeCO(ts: string) {
+  return new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', timeZone: TZ })
 }
 
 export default function History() {
@@ -112,13 +124,13 @@ export default function History() {
             <LineChart data={displayData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="timestamp"
-                tickFormatter={ts => new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                tickFormatter={fmtTimeCO}
                 tick={{ fill: '#94a3b8', fontSize: 10 }} stroke="#475569" interval="preserveStartEnd" />
               <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} stroke="#475569" width={60}
                 tickFormatter={v => v.toLocaleString('es-CO', { maximumFractionDigits: 1 })} />
               <Tooltip
                 contentStyle={{ background: '#1e293b', border: '1px solid #475569', color: '#e2e8f0', fontSize: 11 }}
-                labelFormatter={ts => new Date(ts).toLocaleString('es-CO')}
+                labelFormatter={fmtCO}
                 formatter={(v: number) => [`${v.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${unit}`, label]}
               />
               <Line type="monotone" dataKey={variable} stroke={color} dot={false} strokeWidth={2} name={label} />
@@ -141,7 +153,7 @@ export default function History() {
               {[...displayData].reverse().map((r, i) => (
                 <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                   <td className="px-3 py-1.5 font-mono text-slate-300">
-                    {new Date(r.timestamp).toLocaleString('es-CO')}
+                    {fmtCO(r.timestamp)}
                   </td>
                   <td className="px-3 py-1.5 font-mono text-white text-right">
                     {r[variable].toLocaleString('es-CO', { maximumFractionDigits: 3 })} {unit}

@@ -10,8 +10,10 @@ import type { HistoryRecord } from '../types'
 
 type Variable = 'height' | 'percentage' | 'volume' | 'weight'
 
+const TZ = 'America/Bogota'
+
 const fmtTime = (ts: string) =>
-  new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+  new Date(ts).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', timeZone: TZ })
 
 export default function TankDetail() {
   const { id } = useParams<{ id: string }>()
@@ -140,7 +142,7 @@ export default function TankDetail() {
                 tickFormatter={v => v.toLocaleString('es-CO', { maximumFractionDigits: 1 })} />
               <Tooltip
                 contentStyle={{ background: '#1e293b', border: '1px solid #475569', color: '#e2e8f0', fontSize: 12 }}
-                labelFormatter={ts => new Date(ts).toLocaleString('es-CO')}
+                labelFormatter={ts => new Date(ts).toLocaleString('es-CO', { timeZone: TZ })}
                 formatter={(v: number) => [`${v.toLocaleString('es-CO', { maximumFractionDigits: 2 })} ${varMeta[variable].unit}`, varMeta[variable].label]}
               />
               <Line type="monotone" dataKey={variable} stroke={varMeta[variable].color}
