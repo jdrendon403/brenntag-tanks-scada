@@ -23,7 +23,7 @@ _db: AsyncIOMotorDatabase = None
 
 async def connect_db() -> None:
     global _client, _db
-    _client = AsyncIOMotorClient(settings.mongodb_uri)
+    _client = AsyncIOMotorClient(settings.mongodb_uri, tz_aware=True)
     _db = _client[settings.mongodb_db]
     await _db.tanks_config.create_index("tank_id", unique=True)
     await _db.history.create_index([("tank_id", 1), ("timestamp", -1)])
