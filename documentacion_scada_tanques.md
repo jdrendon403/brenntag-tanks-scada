@@ -28,8 +28,8 @@ El sistema actúa como cliente Modbus TCP. La dirección IP del PLC y el puerto 
 | Sensor mín. TK1–TK13 | 10101–10126 | Float32 | FC03 / FC16 | Rango mínimo del sensor en **mm** |
 | Sensor máx. TK1–TK13 | 10201–10226 | Float32 | FC03 / FC16 | Rango máximo del sensor en **mm** |
 | SWTk1–SWTk13 | 6001–6013 | Bool | **FC01** | Suiche de nivel físico; dirección = registro − 1 |
-| Alarma 1 | configurable (def. 6051) | Bool | FC01 | Indicador de alarma general 1 |
-| Alarma 2 | configurable (def. 6052) | Bool | FC01 | Indicador de alarma general 2 |
+| Alarma DPS | configurable (def. 6051) | Bool | FC01 | Alarma DPS; genera registro de alarma de sistema al activarse |
+| Alarma Monitor de Fase | configurable (def. 6052) | Bool | FC01 | Alarma Monitor de Fase; genera registro de alarma de sistema al activarse |
 | Reset Alarma | configurable (def. 6053) | Bool | FC05 | Escritura True para silenciar; el PLC resetea a False |
 
 > Los registros de alarma global son configurables desde la pantalla **Alarmas → Registros Modbus** sin necesidad de reiniciar el sistema.
@@ -79,8 +79,10 @@ Permite la edición de parámetros críticos. Cada cambio se registra en una tab
 ### 4.5 Pantalla de Alarmas
 
 - Tabla en orden descendente (más reciente arriba).
-- Campos: Tanque, Origen (Suiche o Altura), Inicio, Reconocimiento (ACK), Finalización.
-- Panel colapsable **Registros Modbus** para configurar los registros de Alarma 1, Alarma 2 y Reset desde la interfaz.
+- Campos: Tanque, Origen, Inicio, Reconocimiento (ACK), Finalización.
+- Columna **Tanque**: muestra `TK1`–`TK13` para alarmas de nivel, o **Sistema** para alarmas DPS y Monitor de Fase.
+- Columna **Origen**: `Altura` (naranja), `Suiche` (morado), `Alarma DPS` (azul), `Monitor de Fase` (teal).
+- Panel colapsable **Registros Modbus** para configurar los registros de Alarma DPS, Alarma Monitor de Fase y Reset desde la interfaz.
 - Botón **Silenciar (Reset PLC)** con feedback visual: `Enviando…` → `✓ Reset enviado` / `✗ Error al resetear`.
 
 ## 5. Indicador de Conexión
@@ -111,11 +113,12 @@ Sin tabla (fallback fórmula cilíndrica):
 ### Gestión de Alarmas y Datalogger
 
 1. **Datalogger:** Almacenamiento cada 60 segundos de: Nivel, Porcentaje, Peso, Volumen y Estado del suiche.
-2. **Detección de Alarma:** Se dispara si `Altura > Límite Sobrellenado` O `Suiche == True`.
-3. **Notificación Global:** Banner de alarma persistente en todas las pantallas con botón **Silenciar**.
-4. **Silenciamiento:** Escribe `True` al registro de reset configurado (FC05). El PLC se encarga de volver a `False`.
-5. **Reconocimiento (ACK):** Marca la alarma en BD sin afectar el estado del PLC.
-6. **Recuperación al arranque:** Las alarmas activas en MongoDB se recuperan al reiniciar el servicio.
+2. **Detección de alarma por tanque:** Se dispara si `Altura > Límite Sobrellenado` O `Suiche == True`. Registro en BD con `tank_id` = 1–13.
+3. **Alarmas de sistema:** Cuando los coils **Alarma DPS** (reg. 6051) o **Alarma Monitor de Fase** (reg. 6052) están en `True`, se crea un registro de alarma con `tank_id=0` en la colección `alarms`. Se resuelve automáticamente cuando el coil vuelve a `False`.
+4. **Notificación Global:** Banner de alarma persistente en todas las pantallas muestra los nombres de todos los tanques y sistemas en alarma. Con botón **Silenciar**.
+5. **Silenciamiento:** Escribe `True` al registro de reset configurado (FC05). El PLC se encarga de volver a `False`.
+6. **Reconocimiento (ACK):** Marca la alarma en BD sin afectar el estado del PLC.
+7. **Recuperación al arranque:** Las alarmas activas en MongoDB (incluyendo alarmas de sistema) se recuperan al reiniciar el servicio.
 
 ### Reset de Alarma
 

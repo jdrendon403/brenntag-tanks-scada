@@ -179,8 +179,8 @@ tanks-scada/
 | Switch nivel TK1–TK13 | 6001–6013 | Bool | **FC01** | dirección = registro − 1 |
 | Sensor mín. TK1–TK13 | 10101–10126 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
 | Sensor máx. TK1–TK13 | 10201–10226 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en **mm** |
-| Alarma 1 | configurable | Bool | FC01 | Por defecto reg 6051 |
-| Alarma 2 | configurable | Bool | FC01 | Por defecto reg 6052 |
+| Alarma DPS | configurable | Bool | FC01 | Por defecto reg 6051; genera registro en BD cuando es True |
+| Alarma Monitor de Fase | configurable | Bool | FC01 | Por defecto reg 6052; genera registro en BD cuando es True |
 | Reset alarma | configurable | Bool | FC05 | Por defecto reg 6053; solo envía True, el PLC resetea |
 
 > El PLC envía todas las alturas en **milímetros**. El backend convierte a metros internamente. Los registros de configuración (overflow, sensor range) se escriben al PLC también en mm.
@@ -188,6 +188,10 @@ tanks-scada/
 > El orden de palabras Float32 (ABCD o CDAB) se controla con `MODBUS_WORD_SWAP`.
 
 Los registros de alarma global son configurables desde la pantalla **Alarmas → Registros Modbus**.
+
+### Alarmas de sistema
+
+Cuando el coil **Alarma DPS** (reg. 6051) o **Alarma Monitor de Fase** (reg. 6052) pasa a `True`, el backend crea un registro de alarma con `tank_id=0` en la colección `alarms`. Aparece en el banner de alarma global y en la tabla de alarmas bajo la columna **Sistema**, con origen diferenciado por color. Al volver a `False` la alarma se cierra automáticamente.
 
 ---
 

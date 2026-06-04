@@ -160,8 +160,8 @@ make prod         # o: docker compose -f docker-compose.prod.yml --env-file .env
 | Sensor mín. TK1–TK13 | 10101–10126 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
 | Sensor máx. TK1–TK13 | 10201–10226 | Float32 | FC03 / FC16 | Lectura FC03; escritura FC16; valor en mm |
 | SWTk1–SWTk13 | 6001–6013 | Bool | **FC01** | dirección = registro − 1 |
-| Alarma 1 | configurable (def. 6051) | Bool | FC01 | Solo lectura; configurable desde UI |
-| Alarma 2 | configurable (def. 6052) | Bool | FC01 | Solo lectura; configurable desde UI |
+| Alarma DPS | configurable (def. 6051) | Bool | FC01 | Solo lectura; genera alarma sistema (tank_id=0, origin='dps') |
+| Alarma Monitor de Fase | configurable (def. 6052) | Bool | FC01 | Solo lectura; genera alarma sistema (tank_id=0, origin='phase') |
 | Reset Alarma | configurable (def. 6053) | Bool | FC05 | Solo envía True; el PLC resetea a False |
 
 Todos los registros por tanque son configurables en MongoDB (`tanks_config.modbus`).
@@ -194,13 +194,23 @@ porcentaje   = (altura / max_height) × 100  [clamp 0–100]
 - También cargables desde la UI vía CSV (`height_mm`, `volume_l`).
 
 ### Detección de alarma (services/alarm_service.py)
+
+**Alarmas por tanque (tank_id 1–13):**
 ```
 alarma = (altura_m > overflow_limit_m) OR (suiche == True)
 ```
 - `overflow_limit` = `alarm_height` del config (en metros) si está seteado, sino el valor del registro Modbus dividido por 1000.
+- `origin`: `'height'` o `'switch'`.
+
+**Alarmas de sistema (tank_id=0):**
+- `check_system_alarms(alarm1, alarm2, db)` llamado desde `_poll_once()` después de leer los coils de alarma.
+- `origin='dps'` (Alarma DPS, coil alarm1_register) y `origin='phase'` (Monitor de Fase, coil alarm2_register).
+- Aparecen en el `AlarmBanner` con su nombre completo y en la tabla de Alarmas bajo columna "Sistema".
+
+**Comportamiento común:**
 - Al detectar: inserta registro en `alarms` con `active=True`.
 - Al resolver: actualiza `end_time` y `active=False`.
-- Al arrancar: recupera alarmas activas de MongoDB para no perder estado tras reinicio.
+- Al arrancar: recupera todas las alarmas activas de MongoDB (tanques y sistema) para no perder estado tras reinicio.
 
 ### Reset de alarma
 - `POST /api/alarms/reset` escribe `True` al registro de reset configurado vía FC05.
@@ -274,6 +284,7 @@ Seleccionables globalmente desde la pantalla de Configuración; se persisten en 
 - **Fase 8** ✅ Rango de sensor + límite sobrellenado escritura al PLC (FC16); corrección FC01 suiche
 - **Fase 9** ✅ Integración PLC real: FC03 holding registers, conversión mm↔m, seed con registros reales, UI configuración en mm
 - **Fase 10** ✅ Mejoras operativas: indicador WS+PLC dual, MODBUS_WORD_SWAP, reset alarma con feedback, botones "Guardar y enviar al PLC" unificados, logo Brenntag + favicon
+- **Fase 11** ✅ Alarmas de sistema: Alarma DPS y Monitor de Fase como alarmas independientes (tank_id=0); banner y tabla con nombres y colores diferenciados; recuperación al arranque
 
 ---
 

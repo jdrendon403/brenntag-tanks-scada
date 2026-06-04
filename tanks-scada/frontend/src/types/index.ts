@@ -46,7 +46,7 @@ export interface TankConfig {
 export interface AlarmRecord {
   id: string
   tank_id: number
-  origin: 'height' | 'switch'
+  origin: 'height' | 'switch' | 'dps' | 'phase'
   start_time: string
   ack_time: string | null
   end_time: string | null

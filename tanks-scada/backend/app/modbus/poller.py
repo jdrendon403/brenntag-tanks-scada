@@ -80,12 +80,14 @@ async def _poll_once() -> None:
         await check_alarms(tank_id, height, overflow_limit, switch_active, db)
 
     # Leer alarmas globales del PLC con registros configurables
+    from ..services.alarm_service import check_system_alarms
     alarm_cfg = await db.alarm_config.find_one({}, {"_id": 0})
     if alarm_cfg:
         alarm1 = await modbus_client.read_bool(alarm_cfg["alarm1_register"]) or False
         alarm2 = await modbus_client.read_bool(alarm_cfg["alarm2_register"]) or False
     else:
         alarm1 = alarm2 = False
+    await check_system_alarms(alarm1, alarm2, db)
 
     if ws_manager and tank_states:
         await ws_manager.broadcast({

@@ -3,10 +3,16 @@ import { useTankData } from '../context/TankDataContext'
 import { resetAlarm } from '../api/client'
 
 export function AlarmBanner() {
-  const { tanks } = useTankData()
+  const { tanks, systemAlarms } = useTankData()
   const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle')
   const alarmed = tanks.filter(t => t.alarm)
-  if (alarmed.length === 0) return null
+  const sysLabels: string[] = [
+    ...(systemAlarms.alarm1 ? ['Alarma DPS'] : []),
+    ...(systemAlarms.alarm2 ? ['Alarma Monitor de Fase'] : []),
+  ]
+  if (alarmed.length === 0 && sysLabels.length === 0) return null
+
+  const allLabels = [...alarmed.map(t => t.name), ...sysLabels]
 
   async function handleReset(e?: React.MouseEvent) {
     e?.preventDefault()
@@ -30,7 +36,7 @@ export function AlarmBanner() {
       title="Click derecho para silenciar alarma"
     >
       <span className="font-bold tracking-wide text-sm">
-        ⚠ ALARMA ACTIVA — {alarmed.map(t => t.name).join(' · ')}
+        ⚠ ALARMA ACTIVA — {allLabels.join(' · ')}
       </span>
       <button
         onClick={handleReset}
