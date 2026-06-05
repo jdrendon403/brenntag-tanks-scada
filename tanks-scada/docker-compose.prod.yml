@@ -15,10 +15,14 @@ services:
       - MOCK_MODBUS=${MOCK_MODBUS:-false}
       - PLC_HOST=${PLC_HOST}
       - PLC_PORT=${PLC_PORT:-502}
+      - MODBUS_WORD_SWAP=${MODBUS_WORD_SWAP:-false}
       - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=${MONGODB_DB:-scada_tanks}
       - POLLING_INTERVAL=${POLLING_INTERVAL:-1.0}
       - LOG_LEVEL=${LOG_LEVEL:-WARNING}
+      - AUTH_USER=${AUTH_USER}
+      - AUTH_PASSWORD=${AUTH_PASSWORD}
+      - AUTH_SECRET=${AUTH_SECRET}
     depends_on:
       db_scada:
         condition: service_healthy
