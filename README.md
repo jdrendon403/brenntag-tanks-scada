@@ -108,16 +108,30 @@ copy .env.prod.example .env.prod
 Editar `.env.prod` y reemplazar los valores marcados:
 
 ```dotenv
+# PLC
 PLC_HOST=<IP real del PLC>
 MOCK_MODBUS=false
-MODBUS_WORD_SWAP=false
+MODBUS_WORD_SWAP=false        # true si el PLC usa orden CDAB para Float32
+
+# MongoDB
 MONGO_USER=admin
 MONGO_PASSWORD=<contraseña segura>
 MONGODB_URI=mongodb://admin:<contraseña>@db_scada:27017/scada_tanks?authSource=admin
+
+# Autenticación JWT
+AUTH_USER=admin
+AUTH_PASSWORD=<contraseña segura>
+AUTH_SECRET=<cadena aleatoria larga>
+
+# Red
 HTTP_PORT=80
 ```
 
 > **Importante:** nunca subas `.env.prod` al repositorio; ya está en `.gitignore`.
+
+### Nota — Redes corporativas con inspección SSL
+
+Si el servidor de producción está en una red con proxy de inspección SSL (Zscaler, Forcepoint, etc.), el build de Docker fallará con errores de certificado. Los `Dockerfile` ya incluyen las directivas necesarias (`--trusted-host` en pip, `strict-ssl false` en npm) para trabajar en estas redes sin necesidad de instalar certificados adicionales.
 
 ### 2. Construir y levantar
 
@@ -255,6 +269,14 @@ La barra de navegación muestra dos indicadores independientes:
 | WS activo + PLC sin señal | 🟢 **En línea** · 🟠 **PLC sin señal** |
 
 El estado Modbus se transmite en cada mensaje WebSocket (`modbus_connected`), sin polling adicional.
+
+---
+
+## Manual de operario
+
+El archivo `manual_operario.html` en la raíz del repositorio contiene el manual completo de uso del frontend para el personal de planta. Cúbrelo abriendo el archivo directamente en cualquier navegador — no requiere servidor.
+
+Incluye: acceso al sistema, indicadores de conexión, Vista General, detalle de tanque, alarmas (ACK y silenciar), consulta histórica, configuración completa y procedimientos de operación.
 
 ---
 

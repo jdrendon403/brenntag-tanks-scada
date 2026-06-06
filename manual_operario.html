@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Operario — SCADA Tanques Brenntag Barranquilla</title>
+<style>
+  :root {
+    --bg:       #0f172a;
+    --surface:  #1e293b;
+    --surface2: #334155;
+    --border:   #475569;
+    --text:     #e2e8f0;
+    --muted:    #94a3b8;
+    --green:    #22c55e;
+    --red:      #ef4444;
+    --orange:   #f97316;
+    --amber:    #f59e0b;
+    --blue:     #3b82f6;
+    --purple:   #8b5cf6;
+    --teal:     #14b8a6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+
+  /* ── Portada ── */
+  .cover {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: white;
+    text-align: center;
+    padding: 80px 40px;
+    page-break-after: always;
+  }
+  .cover .logo-b {
+    font-size: 72px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #a855f7, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+  .cover h1 { font-size: 2rem; color: white; margin-bottom: 8px; }
+  .cover h2 { font-size: 1.2rem; color: #94a3b8; font-weight: 400; margin-bottom: 40px; }
+  .cover .badge {
+    display: inline-block;
+    background: #1e293b;
+    border: 1px solid #475569;
+    color: #94a3b8;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    margin: 4px;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+  h1 { font-size: 1.8rem; color: #0f172a; border-bottom: 3px solid #3b82f6; padding-bottom: 8px; margin-bottom: 24px; }
+  h2 { font-size: 1.3rem; color: #1e40af; margin: 32px 0 12px; }
+  h3 { font-size: 1.05rem; color: #1e293b; margin: 20px 0 8px; }
+  p  { margin-bottom: 12px; color: #334155; }
+  ul, ol { margin: 8px 0 12px 24px; color: #334155; }
+  li { margin-bottom: 4px; }
+
+  /* ── Índice ── */
+  .toc { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 40px; }
+  .toc h2 { color: #0f172a; margin-top: 0; }
+  .toc ol { margin-left: 20px; }
+  .toc li { padding: 4px 0; font-size: 0.95rem; }
+  .toc a { color: #3b82f6; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── Sección ── */
+  .section { background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 32px; }
+
+  /* ── Simulación de UI ── */
+  .ui-mock {
+    background: var(--bg);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 16px 0;
+    border: 1px solid #334155;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  /* Navbar */
+  .navbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .navbar .brand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a855f7, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .navbar .nav-links { display: flex; gap: 4px; flex-wrap: wrap; }
+  .navbar .nav-link {
+    color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;
+  }
+  .navbar .nav-link.active { background: #1d4ed8; color: white; }
+  .navbar .status-bar { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot-green  { background: var(--green); }
+  .dot-red    { background: var(--red); animation: pulse 1s infinite; }
+  .dot-orange { background: var(--orange); animation: pulse 1s infinite; }
+
+  /* Alarm banner */
+  .alarm-banner {
+    background: #991b1b;
+    color: white;
+    padding: 8px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    animation: pulse-bg 1s infinite;
+  }
+  .alarm-banner button {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.4);
+    color: white;
+    padding: 3px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  /* Contenido de pantallas */
+  .screen-body { padding: 20px; }
+
+  /* Tarjetas de tanque */
+  .tank-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .tank-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    color: var(--text);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .tank-card:hover { border-color: var(--blue); }
+  .tank-card.alarm { border-color: var(--red); animation: border-pulse 1s infinite; }
+  .tank-card .tank-name { font-weight: 700; font-size: 0.9rem; color: white; margin-bottom: 6px; }
+  .tank-card .tank-level-bar {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 60px;
+    position: relative;
+    overflow: hidden;
+    margin: 6px 0;
+  }
+  .tank-card .tank-level-fill {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    border-radius: 4px 4px 0 0;
+    transition: height .5s;
+  }
+  .tank-card .tank-pct { font-size: 0.85rem; font-weight: 700; color: white; }
+  .tank-card .tank-product { color: var(--muted); font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Barras de nivel detalle */
+  .level-bars { display: flex; justify-content: center; gap: 32px; padding: 16px; flex-wrap: wrap; }
+  .level-bar-wrap { text-align: center; }
+  .level-bar-outer {
+    width: 48px; height: 140px;
+    background: var(--surface2);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto 6px;
+  }
+  .level-bar-fill { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 4px 4px 0 0; }
+  .level-label { color: var(--muted); font-size: 0.7rem; }
+  .level-value { color: white; font-size: 0.85rem; font-weight: 700; }
+
+  /* Info grid */
+  .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .info-card { background: var(--surface2); border-radius: 6px; padding: 8px; text-align: center; }
+  .info-card .i-label { color: var(--muted); font-size: 0.65rem; }
+  .info-card .i-val { color: white; font-size: 0.85rem; font-weight: 700; }
+
+  /* Tabla */
+  .mock-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; color: var(--text); }
+  .mock-table th { text-align: left; padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .mock-table td { padding: 7px 10px; border-bottom: 1px solid #1e293b; }
+  .mock-table tr:hover td { background: rgba(255,255,255,.03); }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+  .badge-red    { background: #7f1d1d; color: #fca5a5; animation: pulse 1s infinite; }
+  .badge-yellow { background: #78350f; color: #fcd34d; }
+  .badge-slate  { background: var(--surface2); color: var(--muted); }
+  .badge-orange { background: #7c2d12; color: #fdba74; }
+  .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+  .badge-teal   { background: #134e4a; color: #5eead4; }
+
+  /* Filtros */
+  .filter-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .filter-bar select, .filter-bar input {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+  .btn { padding: 4px 14px; border-radius: 5px; font-size: 0.75rem; font-weight: 600; border: none; cursor: pointer; }
+  .btn-blue   { background: #1d4ed8; color: white; }
+  .btn-red    { background: #991b1b; color: white; }
+  .btn-slate  { background: var(--surface2); color: var(--text); }
+  .btn-amber  { background: #b45309; color: white; }
+
+  /* Callout */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+  .callout-info    { background: #eff6ff; border-left: 4px solid #3b82f6; }
+  .callout-warn    { background: #fffbeb; border-left: 4px solid #f59e0b; }
+  .callout-danger  { background: #fef2f2; border-left: 4px solid #ef4444; }
+  .callout-success { background: #f0fdf4; border-left: 4px solid #22c55e; }
+  .callout p { margin: 0; font-size: 0.9rem; color: #1e293b; }
+  .callout strong { color: #0f172a; }
+
+  /* Step */
+  .steps { counter-reset: step; list-style: none; margin: 0; padding: 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step);
+    background: #1d4ed8;
+    color: white;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .steps li p { margin: 0; }
+
+  /* Glosario */
+  .glosario dt { font-weight: 700; color: #1e293b; margin-top: 10px; }
+  .glosario dd { color: #475569; margin-left: 16px; font-size: 0.9rem; }
+
+  /* Animaciones */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  @keyframes border-pulse { 0%,100%{border-color:#ef4444} 50%{border-color:#fca5a5} }
+  @keyframes pulse-bg { 0%,100%{background:#991b1b} 50%{background:#7f1d1d} }
+
+  /* Separador de sección */
+  .section-num {
+    display: inline-block;
+    background: #1d4ed8;
+    color: white;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 32px;
+    font-weight: 700;
+    margin-right: 10px;
+    font-size: 0.95rem;
+  }
+
+  /* Tabla de referencia */
+  .ref-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 12px 0; }
+  .ref-table th { background: #e2e8f0; padding: 8px 12px; text-align: left; font-size: 0.8rem; color: #475569; text-transform: uppercase; letter-spacing: .05em; }
+  .ref-table td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+  .ref-table tr:nth-child(even) td { background: #f8fafc; }
+
+  /* Print */
+  @media print {
+    body { background: white; }
+    .cover { page-break-after: always; }
+    .section { break-inside: avoid; box-shadow: none; border: 1px solid #e2e8f0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ PORTADA ══════════════ -->
+<div class="cover">
+  <div class="logo-b">B</div>
+  <h1>Sistema SCADA — Monitoreo de Tanques</h1>
+  <h2>Brenntag Barranquilla</h2>
+  <div style="margin-top: 32px;">
+    <span class="badge">Manual de Operario</span>
+    <span class="badge">Versión 1.0</span>
+    <span class="badge">2026</span>
+  </div>
+  <p style="margin-top: 48px; color: #475569; font-size: 0.85rem;">
+    Este manual describe el uso del sistema de monitoreo web para los 13 tanques industriales.<br>
+    Consulte al supervisor para operaciones de configuración.
+  </p>
+</div>
+
+<!-- ══════════════ CONTENIDO ══════════════ -->
+<div class="container">
+
+  <!-- Índice -->
+  <div class="toc">
+    <h2>📋 Contenido</h2>
+    <ol>
+      <li><a href="#acceso">Acceso al sistema</a></li>
+      <li><a href="#navbar">Barra de navegación y estado de conexión</a></li>
+      <li><a href="#general">Vista General — los 13 tanques</a></li>
+      <li><a href="#detalle">Detalle de un tanque</a></li>
+      <li><a href="#alarmas">Pantalla de Alarmas</a></li>
+      <li><a href="#historico">Consulta Histórica</a></li>
+      <li><a href="#configuracion">Pantalla de Configuración</a>
+        <ol style="margin-top:4px;">
+          <li><a href="#configuracion">Unidades de Visualización</a></li>
+          <li><a href="#configuracion">Producto y Densidad</a></li>
+          <li><a href="#configuracion">Alarma de Sobrellenado</a></li>
+          <li><a href="#configuracion">Registros Modbus</a></li>
+          <li><a href="#configuracion">Rango del Sensor</a></li>
+          <li><a href="#configuracion">Tabla de Aforo</a></li>
+          <li><a href="#configuracion">Historial de Cambios</a></li>
+        </ol>
+      </li>
+      <li><a href="#procedimientos">Procedimientos de operación</a></li>
+      <li><a href="#glosario">Glosario</a></li>
+    </ol>
+  </div>
+
+  <!-- ══ 1. ACCESO ══ -->
+  <div class="section" id="acceso">
+    <h1><span class="section-num">1</span>Acceso al sistema</h1>
+    <p>Abra un navegador web (Chrome o Edge recomendado) e ingrese la dirección del servidor:</p>
+
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 20px; font-family:monospace; font-size:1.1rem; color:#1e293b; margin:16px 0; text-align:center;">
+      http://&lt;IP del servidor&gt;:8000
+    </div>
+
+    <p>El sistema muestra los datos en tiempo real sin necesidad de iniciar sesión. El <strong>login solo es necesario para reconocer alarmas o silenciar el PLC</strong>.</p>
+
+    <h2>Modal de inicio de sesión</h2>
+    <p>Cuando se intenta realizar una acción protegida (como reconocer una alarma), aparece automáticamente este formulario:</p>
+
+    <div class="ui-mock" style="max-width:360px; margin:0 auto;">
+      <div style="background:rgba(0,0,0,.6); padding:32px 20px; display:flex; justify-content:center;">
+        <div style="background:#1e293b; border:1px solid #475569; border-radius:10px; padding:24px; width:100%;">
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:1.5rem; font-weight:900; background:linear-gradient(135deg,#a855f7,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; display:inline-block;">Brenntag SCADA</div>
+            <p style="color:#94a3b8; font-size:0.8rem; margin-top:4px;">Acceso de operario</p>
+          </div>
+          <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:4px;">Usuario</label>
+          <input type="text" value="admin" style="width:100%; background:#0f172a; border:1px solid #475569; color:white; padding:6px 10px; border-radius:5px; margin-bottom:10px; font-size:0.85rem;">
+          <label style="display:block; color:#94a3b8; font-size:0.75rem; margin-bottom:4px;">Contraseña</label>
+          <input type="password" value="●●●●●●●●" style="width:100%; background:#0f172a; border:1px solid #475569; color:white; padding:6px 10px; border-radius:5px; margin-bottom:14px; font-size:0.85rem;">
+          <button class="btn btn-blue" style="width:100%; padding:8px;">Ingresar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info" style="margin-top:16px;">
+      <div class="callout-icon">ℹ️</div>
+      <p>Solicite el usuario y contraseña al supervisor. La sesión se cierra automáticamente al cerrar la pestaña del navegador.</p>
+    </div>
+  </div>
+
+  <!-- ══ 2. NAVBAR ══ -->
+  <div class="section" id="navbar">
+    <h1><span class="section-num">2</span>Barra de navegación y estado de conexión</h1>
+    <p>La barra superior siempre visible muestra la navegación entre pantallas y los indicadores de conexión.</p>
+
+    <div class="ui-mock">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link active">Vista General</span>
+          <span class="nav-link">Alarmas</span>
+          <span class="nav-link">Histórico</span>
+          <span class="nav-link">Configuración</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">En línea</span>
+          <span style="color:#475569;">·</span>
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">PLC</span>
+        </div>
+      </div>
+    </div>
+
+    <h2>Indicadores de conexión</h2>
+    <table class="ref-table">
+      <thead><tr><th>Indicador</th><th>Color</th><th>Significado</th><th>Qué hacer</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="dot dot-green" style="vertical-align:middle;"></span> <strong style="color:#166534;">En línea · PLC</strong></td>
+          <td>🟢 Verde fijo</td>
+          <td>Sistema conectado normalmente</td>
+          <td>Operación normal</td>
+        </tr>
+        <tr>
+          <td><span class="dot dot-orange" style="vertical-align:middle;"></span> <strong style="color:#9a3412;">PLC sin señal</strong></td>
+          <td>🟠 Naranja parpadeante</td>
+          <td>Servidor activo pero sin comunicación con el PLC</td>
+          <td>Avisar al supervisor</td>
+        </tr>
+        <tr>
+          <td><span class="dot dot-red" style="vertical-align:middle;"></span> <strong style="color:#991b1b;">Sin conexión</strong></td>
+          <td>🔴 Rojo parpadeante</td>
+          <td>El navegador perdió conexión con el servidor</td>
+          <td>Verificar red; el sistema reconecta solo</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Banner de alarma</h2>
+    <p>Cuando hay una alarma activa, aparece una barra roja parpadeante sobre todas las pantallas:</p>
+
+    <div class="ui-mock">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link active">Vista General</span>
+          <span class="nav-link">Alarmas</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">En línea · PLC</span>
+        </div>
+      </div>
+      <div class="alarm-banner">
+        <span>⚠ ALARMA ACTIVA — TK1 · TK5 · Alarma DPS</span>
+        <button>Silenciar</button>
+      </div>
+    </div>
+
+    <div class="callout callout-danger" style="margin-top:12px;">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>El banner muestra los tanques y sistemas en alarma.</strong> Mientras sea visible, existe una condición de riesgo. Proceda según el protocolo de emergencia de la planta.</p>
+    </div>
+  </div>
+
+  <!-- ══ 3. VISTA GENERAL ══ -->
+  <div class="section" id="general">
+    <h1><span class="section-num">3</span>Vista General — los 13 tanques</h1>
+    <p>Es la pantalla principal. Muestra el estado en tiempo real de todos los tanques en una cuadrícula. Los datos se actualizan cada segundo automáticamente.</p>
+
+    <div class="ui-mock">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link active">Vista General</span>
+          <span class="nav-link">Alarmas</span>
+          <span class="nav-link">Histórico</span>
+          <span class="nav-link">Configuración</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">En línea · PLC</span>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="tank-grid">
+          <!-- TK1 alarma -->
+          <div class="tank-card alarm">
+            <div class="tank-name">TK1</div>
+            <div class="tank-level-bar">
+              <div class="tank-level-fill" style="height:90%; background:#ef4444;"></div>
+            </div>
+            <div class="tank-pct" style="color:#ef4444;">90.0%</div>
+            <div class="tank-product">Ac. Sulfúrico</div>
+          </div>
+          <!-- TK2 normal -->
+          <div class="tank-card">
+            <div class="tank-name">TK2</div>
+            <div class="tank-level-bar">
+              <div class="tank-level-fill" style="height:65%; background:#3b82f6;"></div>
+            </div>
+            <div class="tank-pct">65.0%</div>
+            <div class="tank-product">Ac. Acético</div>
+          </div>
+          <!-- TK3 normal -->
+          <div class="tank-card">
+            <div class="tank-name">TK3</div>
+            <div class="tank-level-bar">
+              <div class="tank-level-fill" style="height:25%; background:#3b82f6;"></div>
+            </div>
+            <div class="tank-pct">25.0%</div>
+            <div class="tank-product">—</div>
+          </div>
+          <!-- TK4..TK6 -->
+          <div class="tank-card">
+            <div class="tank-name">TK4</div>
+            <div class="tank-level-bar">
+              <div class="tank-level-fill" style="height:81%; background:#3b82f6;"></div>
+            </div>
+            <div class="tank-pct">81.3%</div>
+            <div class="tank-product">—</div>
+          </div>
+          <div class="tank-card">
+            <div class="tank-name">TK5</div>
+            <div class="tank-level-bar">
+              <div class="tank-level-fill" style="height:0%; background:#3b82f6;"></div>
+            </div>
+            <div class="tank-pct">0.0%</div>
+            <div class="tank-product">—</div>
+          </div>
+          <div class="tank-card">
+            <div class="tank-name">TK13</div>
+            <div class="tank-level-bar">
+              <div class="tank-level-fill" style="height:53%; background:#3b82f6;"></div>
+            </div>
+            <div class="tank-pct">53.0%</div>
+            <div class="tank-product">—</div>
+          </div>
+        </div>
+        <p style="color:#475569; font-size:0.7rem; margin-top:12px; text-align:center;">Se muestran 6 de 13 tanques como ejemplo</p>
+      </div>
+    </div>
+
+    <h2>Cómo leer cada tarjeta de tanque</h2>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:12px 0;">
+      <div>
+        <div class="tank-card" style="max-width:130px; display:inline-block; background:#1e293b; border-color:#475569;">
+          <div class="tank-name" style="font-size:0.9rem; color:white;">TK2</div>
+          <div class="tank-level-bar">
+            <div class="tank-level-fill" style="height:65%; background:#3b82f6;"></div>
+          </div>
+          <div class="tank-pct" style="color:white;">65.0%</div>
+          <div class="tank-product">Ac. Acético</div>
+        </div>
+      </div>
+      <div style="font-size:0.88rem; color:#334155;">
+        <p>① <strong>Nombre</strong> del tanque (TK1–TK13)</p>
+        <p>② <strong>Barra de nivel</strong> — altura proporcional al llenado</p>
+        <p>③ <strong>Porcentaje</strong> de llenado actual</p>
+        <p>④ <strong>Producto</strong> almacenado</p>
+      </div>
+    </div>
+
+    <h2>Tanque en alarma</h2>
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div class="tank-card alarm" style="max-width:130px; display:inline-block; background:#1e293b;">
+        <div class="tank-name" style="color:white;">TK1</div>
+        <div class="tank-level-bar">
+          <div class="tank-level-fill" style="height:90%; background:#ef4444;"></div>
+        </div>
+        <div class="tank-pct" style="color:#ef4444;">90.0%</div>
+        <div class="tank-product">Ac. Sulfúrico</div>
+      </div>
+      <p style="font-size:0.88rem; color:#334155; max-width:300px;">
+        El borde y la barra cambian a <strong style="color:#dc2626;">rojo parpadeante</strong> cuando el tanque supera el nivel de alarma o el suiche de nivel alto está activo. Haga clic en el tanque para ver el detalle.
+      </p>
+    </div>
+
+    <div class="callout callout-info" style="margin-top:16px;">
+      <div class="callout-icon">💡</div>
+      <p>Haga <strong>clic en cualquier tarjeta</strong> de tanque para abrir la pantalla de detalle con información completa.</p>
+    </div>
+  </div>
+
+  <!-- ══ 4. DETALLE ══ -->
+  <div class="section" id="detalle">
+    <h1><span class="section-num">4</span>Detalle de un tanque</h1>
+    <p>Muestra en profundidad el estado de un tanque individual: barras de nivel, valores numéricos y gráfico histórico. Acceda haciendo clic sobre una tarjeta en la Vista General.</p>
+
+    <div class="ui-mock">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link">← Vista General</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">En línea · PLC</span>
+        </div>
+      </div>
+      <div class="screen-body">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <p style="color:#3b82f6; font-size:0.75rem; cursor:pointer;">← Vista General</p>
+            <h2 style="color:white; font-size:1.4rem; margin:4px 0;">TK1</h2>
+            <p style="color:#94a3b8; font-size:0.8rem;">Ácido Sulfúrico</p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="badge badge-red">⚠ ALARMA</span>
+            <button class="btn btn-slate" style="font-size:0.75rem;">⚙ Configurar</button>
+          </div>
+        </div>
+        <!-- Barras -->
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:16px;">
+          <div class="level-bars">
+            <div class="level-bar-wrap">
+              <div class="level-bar-outer">
+                <div class="level-bar-fill" style="height:90%; background:#ef4444;"></div>
+              </div>
+              <div class="level-label">Altura</div>
+              <div class="level-value" style="color:#ef4444;">9.002 m</div>
+            </div>
+            <div class="level-bar-wrap">
+              <div class="level-bar-outer">
+                <div class="level-bar-fill" style="height:90%; background:#8b5cf6;"></div>
+              </div>
+              <div class="level-label">Volumen</div>
+              <div class="level-value">1 820 L</div>
+            </div>
+            <div class="level-bar-wrap">
+              <div class="level-bar-outer">
+                <div class="level-bar-fill" style="height:90%; background:#f59e0b;"></div>
+              </div>
+              <div class="level-label">Peso</div>
+              <div class="level-value">3 349 kg</div>
+            </div>
+          </div>
+          <div class="info-grid">
+            <div class="info-card"><div class="i-label">Nivel</div><div class="i-val">90.0%</div></div>
+            <div class="info-card"><div class="i-label">Sobrellenado</div><div class="i-val" style="color:#ef4444;">9.00 m</div></div>
+            <div class="info-card"><div class="i-label">Suiche activo</div><div class="i-val">No</div></div>
+            <div class="info-card"><div class="i-label">Densidad</div><div class="i-val">1.840 kg/L</div></div>
+          </div>
+        </div>
+        <!-- Gráfico simulado -->
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:14px; margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+            <span style="color:#cbd5e1; font-size:0.8rem; font-weight:600;">Tendencia histórica</span>
+            <div style="display:flex; gap:4px;">
+              <span style="background:#1d4ed8; color:white; padding:2px 8px; border-radius:4px; font-size:0.7rem;">Altura</span>
+              <span style="color:#94a3b8; padding:2px 8px; font-size:0.7rem;">Nivel</span>
+              <span style="color:#94a3b8; padding:2px 8px; font-size:0.7rem;">Volumen</span>
+              <span style="color:#94a3b8; padding:2px 8px; font-size:0.7rem;">Peso</span>
+            </div>
+          </div>
+          <svg width="100%" height="80" viewBox="0 0 400 80" preserveAspectRatio="none">
+            <polyline points="0,60 40,55 80,50 120,45 160,40 200,42 240,38 280,35 320,30 360,28 400,25"
+              fill="none" stroke="#3b82f6" stroke-width="2"/>
+            <polyline points="0,60 40,55 80,50 120,45 160,40 200,42 240,38 280,35 320,30 360,28 400,25"
+              fill="url(#grad)" stroke="none" opacity="0.1"/>
+            <defs>
+              <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div style="display:flex; justify-content:space-between; color:#475569; font-size:0.65rem; margin-top:2px;">
+            <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2>Qué muestra cada barra</h2>
+    <table class="ref-table">
+      <thead><tr><th>Barra</th><th>Color</th><th>Qué mide</th><th>Unidad</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Altura</strong></td><td>🔵 Azul (normal) / 🔴 Rojo (alarma)</td><td>Nivel del líquido desde el fondo</td><td>m / cm / mm</td></tr>
+        <tr><td><strong>Volumen</strong></td><td>🟣 Morado</td><td>Cantidad de líquido</td><td>L / gal</td></tr>
+        <tr><td><strong>Peso</strong></td><td>🟡 Ámbar</td><td>Masa del líquido (volumen × densidad)</td><td>kg</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Gráfico histórico</h2>
+    <p>Muestra la tendencia de las últimas 24 horas. Use los botones <strong>Altura / Nivel / Volumen / Peso</strong> para cambiar la variable graficada. Para rangos de fecha personalizados, use la pantalla <a href="#historico">Consulta Histórica</a>.</p>
+  </div>
+
+  <!-- ══ 5. ALARMAS ══ -->
+  <div class="section" id="alarmas">
+    <h1><span class="section-num">5</span>Pantalla de Alarmas</h1>
+    <p>Registra todas las alarmas ocurridas: por sobrellenado de tanques, activación de suiches, Alarma DPS y Monitor de Fase.</p>
+
+    <div class="ui-mock">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link">Vista General</span>
+          <span class="nav-link active">Alarmas</span>
+          <span class="nav-link">Histórico</span>
+          <span class="nav-link">Configuración</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">En línea · PLC</span>
+        </div>
+      </div>
+      <div class="alarm-banner">
+        <span>⚠ ALARMA ACTIVA — TK1</span>
+        <button>Silenciar</button>
+      </div>
+      <div class="screen-body">
+        <!-- Header con botones -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <h3 style="color:white; font-size:1rem; margin:0;">Registro de Alarmas</h3>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-slate">Registros Modbus</button>
+            <button class="btn btn-red">Silenciar (Reset PLC)</button>
+          </div>
+        </div>
+        <!-- Filtros -->
+        <div class="filter-bar">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox"> Solo activas
+          </label>
+          <label style="display:flex; align-items:center; gap:6px;">
+            Tanque:
+            <select><option>Todos</option></select>
+          </label>
+          <button class="btn btn-slate" style="margin-left:auto;">Actualizar</button>
+        </div>
+        <!-- Tabla -->
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; overflow:auto;">
+          <table class="mock-table">
+            <thead>
+              <tr>
+                <th>Tanque</th><th>Origen</th><th>Inicio</th><th>Reconocimiento</th><th>Finalización</th><th>Estado</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight:700; color:white;">TK1</td>
+                <td><span class="badge badge-orange">Altura</span></td>
+                <td style="color:#cbd5e1; font-family:monospace;">04/06/2026 09:12:34</td>
+                <td style="color:#94a3b8;">—</td>
+                <td style="color:#94a3b8;">—</td>
+                <td><span class="badge badge-red">ACTIVA</span></td>
+                <td><button class="btn btn-amber" style="font-size:0.7rem; padding:2px 8px;">ACK</button></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700; color:white;">Sistema</td>
+                <td><span class="badge badge-blue">Alarma DPS</span></td>
+                <td style="color:#cbd5e1; font-family:monospace;">04/06/2026 08:50:10</td>
+                <td style="color:#cbd5e1; font-family:monospace;">04/06/2026 08:51:05</td>
+                <td style="color:#94a3b8;">—</td>
+                <td><span class="badge badge-yellow">RECONOCIDA</span></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td style="font-weight:700; color:white;">TK5</td>
+                <td><span class="badge" style="background:#4a1d96; color:#c4b5fd;">Suiche</span></td>
+                <td style="color:#cbd5e1; font-family:monospace;">03/06/2026 22:05:00</td>
+                <td style="color:#cbd5e1; font-family:monospace;">03/06/2026 22:06:12</td>
+                <td style="color:#cbd5e1; font-family:monospace;">03/06/2026 22:10:30</td>
+                <td><span class="badge badge-slate">FINALIZADA</span></td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h2>Tipos de alarma</h2>
+    <table class="ref-table">
+      <thead><tr><th>Origen</th><th>Color</th><th>Causa</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-orange">Altura</span></td><td>Naranja</td><td>El nivel del tanque superó el límite de sobrellenado configurado</td></tr>
+        <tr><td><span class="badge" style="background:#4a1d96; color:#c4b5fd;">Suiche</span></td><td>Morado</td><td>El sensor de nivel alto (suiche físico) se activó</td></tr>
+        <tr><td><span class="badge badge-blue">Alarma DPS</span></td><td>Azul</td><td>El PLC reportó activación de la alarma DPS del sistema</td></tr>
+        <tr><td><span class="badge" style="background:#134e4a; color:#5eead4;">Monitor de Fase</span></td><td>Teal</td><td>El PLC reportó activación del monitor de fase</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Estados de una alarma</h2>
+    <table class="ref-table">
+      <thead><tr><th>Estado</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-red">ACTIVA</span></td><td>La condición de alarma persiste en este momento. Requiere atención.</td></tr>
+        <tr><td><span class="badge badge-yellow">RECONOCIDA</span></td><td>El operario confirmó que vio la alarma, pero la condición aún no se resuelve.</td></tr>
+        <tr><td><span class="badge badge-slate">FINALIZADA</span></td><td>La condición de alarma desapareció. Registro histórico.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Reconocer una alarma (ACK)</h2>
+    <ol class="steps">
+      <li><p>Localice la alarma activa en la tabla (fila con badge rojo <strong>ACTIVA</strong>).</p></li>
+      <li><p>Haga clic en el botón <strong style="background:#b45309; color:white; padding:2px 8px; border-radius:4px; font-size:0.85rem;">ACK</strong> en la columna derecha.</p></li>
+      <li><p>Si no ha iniciado sesión, aparece el formulario de login. Ingrese sus credenciales.</p></li>
+      <li><p>El estado cambia a <span class="badge badge-yellow">RECONOCIDA</span>. La alarma sigue activa hasta que la condición se resuelva físicamente.</p></li>
+    </ol>
+
+    <h2>Silenciar la alarma (Reset PLC)</h2>
+    <ol class="steps">
+      <li><p>Haga clic en el botón rojo <strong>Silenciar (Reset PLC)</strong> en la esquina superior derecha, o en el botón <strong>Silenciar</strong> del banner rojo.</p></li>
+      <li><p>El botón cambia a <em>Enviando…</em> mientras procesa.</p></li>
+      <li><p>Si tiene éxito muestra <strong>✓ Reset enviado</strong>. El PLC recibe la señal y desactiva la alarma sonora.</p></li>
+      <li><p>Si falla muestra <strong>✗ Error al resetear</strong> — verifique la conexión con el PLC.</p></li>
+    </ol>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>Silenciar no elimina la causa de la alarma.</strong> Solo apaga la señal sonora del PLC. El nivel del tanque o la condición del suiche deben corregirse físicamente para que la alarma pase a <span class="badge badge-slate">FINALIZADA</span>.</p>
+    </div>
+  </div>
+
+  <!-- ══ 6. HISTÓRICO ══ -->
+  <div class="section" id="historico">
+    <h1><span class="section-num">6</span>Consulta Histórica</h1>
+    <p>Permite consultar el comportamiento de cualquier tanque en un período de tiempo. El sistema almacena un registro cada 60 segundos.</p>
+
+    <div class="ui-mock">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link">Vista General</span>
+          <span class="nav-link">Alarmas</span>
+          <span class="nav-link active">Histórico</span>
+          <span class="nav-link">Configuración</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e; font-size:0.75rem;">En línea · PLC</span>
+        </div>
+      </div>
+      <div class="screen-body">
+        <h3 style="color:white; margin-bottom:14px; font-size:1rem;">Consulta Histórica</h3>
+        <!-- Filtros -->
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:12px 16px; display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin-bottom:12px;">
+          <label style="display:block; font-size:0.75rem;">
+            <span style="color:#94a3b8; display:block; margin-bottom:4px;">Tanque</span>
+            <select style="background:#0f172a; border:1px solid #475569; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem;">
+              <option>TK1</option>
+            </select>
+          </label>
+          <label style="display:block; font-size:0.75rem;">
+            <span style="color:#94a3b8; display:block; margin-bottom:4px;">Variable</span>
+            <select style="background:#0f172a; border:1px solid #475569; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem;">
+              <option>Altura (m)</option>
+            </select>
+          </label>
+          <label style="display:block; font-size:0.75rem;">
+            <span style="color:#94a3b8; display:block; margin-bottom:4px;">Desde</span>
+            <input type="datetime-local" value="2026-06-04T00:00" style="background:#0f172a; border:1px solid #475569; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem;">
+          </label>
+          <label style="display:block; font-size:0.75rem;">
+            <span style="color:#94a3b8; display:block; margin-bottom:4px;">Hasta</span>
+            <input type="datetime-local" value="2026-06-05T00:00" style="background:#0f172a; border:1px solid #475569; color:white; padding:4px 8px; border-radius:4px; font-size:0.75rem;">
+          </label>
+          <button class="btn btn-blue" style="padding:6px 18px;">Consultar</button>
+        </div>
+        <!-- Gráfico -->
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:14px; margin-bottom:10px;">
+          <p style="color:#cbd5e1; font-size:0.8rem; margin-bottom:8px;">TK1 — Altura (m) <span style="color:#475569;">(1 440 registros)</span></p>
+          <svg width="100%" height="90" viewBox="0 0 500 90" preserveAspectRatio="none">
+            <polyline points="0,70 50,65 100,60 150,55 200,45 250,50 300,42 350,38 400,30 450,28 500,25"
+              fill="none" stroke="#3b82f6" stroke-width="2"/>
+          </svg>
+          <div style="display:flex; justify-content:space-between; color:#475569; font-size:0.65rem; margin-top:2px;">
+            <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>00:00</span>
+          </div>
+        </div>
+        <!-- Tabla resumen -->
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; overflow:auto; max-height:130px;">
+          <table class="mock-table">
+            <thead><tr><th>Fecha / Hora</th><th style="text-align:right;">Altura (m)</th></tr></thead>
+            <tbody>
+              <tr><td style="color:#cbd5e1; font-family:monospace;">05/06/2026 00:00:00</td><td style="text-align:right; font-family:monospace; color:white;">9.002</td></tr>
+              <tr><td style="color:#cbd5e1; font-family:monospace;">04/06/2026 23:59:00</td><td style="text-align:right; font-family:monospace; color:white;">8.998</td></tr>
+              <tr><td style="color:#cbd5e1; font-family:monospace;">04/06/2026 23:58:00</td><td style="text-align:right; font-family:monospace; color:white;">8.995</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h2>Cómo hacer una consulta</h2>
+    <ol class="steps">
+      <li><p>Seleccione el <strong>tanque</strong> que desea consultar (TK1 a TK13).</p></li>
+      <li><p>Elija la <strong>variable</strong>: Altura, Nivel (%), Volumen o Peso.</p></li>
+      <li><p>Establezca el rango de fechas con los campos <strong>Desde</strong> y <strong>Hasta</strong>.</p></li>
+      <li><p>Haga clic en <strong style="background:#1d4ed8; color:white; padding:2px 10px; border-radius:4px; font-size:0.85rem;">Consultar</strong>.</p></li>
+      <li><p>El gráfico y la tabla se actualizan con los datos del período seleccionado (máximo 1 440 registros = 24 horas a 1 min/registro).</p></li>
+    </ol>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">💡</div>
+      <p>Para períodos mayores a 24 horas, amplíe el rango de fechas. El sistema retornará hasta 1 440 registros espaciados uniformemente en el rango seleccionado.</p>
+    </div>
+  </div>
+
+  <!-- ══ 7. CONFIGURACIÓN ══ -->
+  <div class="section" id="configuracion">
+    <h1><span class="section-num">7</span>Pantalla de Configuración</h1>
+    <p>Permite ajustar los parámetros de cada tanque: nombre, producto, densidad, alarma de sobrellenado, registros Modbus, rango del sensor y tabla de aforo. <strong>Requiere inicio de sesión.</strong></p>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>Solo personal autorizado</strong> debe modificar la configuración. Cambios incorrectos pueden afectar las lecturas de nivel o la comunicación con el PLC.</p>
+    </div>
+
+    <!-- Vista general de la pantalla -->
+    <div class="ui-mock" style="margin-top:16px;">
+      <div class="navbar">
+        <span class="brand">Brenntag SCADA</span>
+        <div class="nav-links">
+          <span class="nav-link">Vista General</span>
+          <span class="nav-link">Alarmas</span>
+          <span class="nav-link">Histórico</span>
+          <span class="nav-link active">Configuración</span>
+        </div>
+        <div class="status-bar">
+          <span class="dot dot-green"></span>
+          <span style="color:#22c55e;font-size:.75rem;">En línea · PLC</span>
+        </div>
+      </div>
+      <div class="screen-body" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+        <h3 style="color:white;font-size:1rem;margin:0;">Configuración de Tanque</h3>
+        <select style="background:#334155;border:1px solid #475569;color:white;padding:3px 10px;border-radius:5px;font-size:.8rem;">
+          <option>TK1</option><option>TK2</option><option>TK3</option>
+        </select>
+      </div>
+      <!-- Unidades -->
+      <div style="margin:0 20px 12px;background:#1e293b;border:1px solid #4338ca;border-radius:8px;padding:14px;">
+        <p style="color:#818cf8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Unidades de Visualización (globales)</p>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;">
+          <label style="font-size:.75rem;">
+            <span style="color:#94a3b8;display:block;margin-bottom:3px;">Nivel / Altura</span>
+            <select style="background:#0f172a;border:1px solid #475569;color:white;padding:3px 8px;border-radius:4px;font-size:.75rem;">
+              <option>cm — centímetros</option><option>m — metros</option><option>mm — milímetros</option>
+            </select>
+          </label>
+          <label style="font-size:.75rem;">
+            <span style="color:#94a3b8;display:block;margin-bottom:3px;">Volumen</span>
+            <select style="background:#0f172a;border:1px solid #475569;color:white;padding:3px 8px;border-radius:4px;font-size:.75rem;">
+              <option>L — litros</option><option>gal — galones US</option>
+            </select>
+          </label>
+        </div>
+        <p style="color:#475569;font-size:.7rem;margin-top:8px;">Peso siempre en kg. Aplica en todas las pantallas.</p>
+      </div>
+      <!-- Form principal -->
+      <div style="margin:0 20px 20px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:16px;">
+        <!-- Producto -->
+        <div>
+          <p style="color:#94a3b8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Producto</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Nombre del tanque</span>
+              <input type="text" value="TK1" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Producto</span>
+              <input type="text" value="Ácido Sulfúrico" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+          </div>
+        </div>
+        <!-- Densidad -->
+        <div>
+          <p style="color:#94a3b8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Propiedades del producto</p>
+          <label style="font-size:.75rem;max-width:160px;display:block;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Densidad (kg/L)</span>
+            <input type="number" value="1.84" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+        </div>
+        <!-- Alarma sobrellenado -->
+        <div>
+          <p style="color:#94a3b8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Alarma de Sobrellenado</p>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:white;margin-bottom:8px;cursor:pointer;">
+            <input type="checkbox" checked> Usar umbral personalizado (override valor del PLC)
+          </label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label style="font-size:.75rem;max-width:160px;display:block;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Altura de alarma (mm)</span>
+              <input type="number" value="9000" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <button style="background:#c2410c;color:white;border:none;padding:6px 14px;border-radius:5px;font-size:.75rem;font-weight:600;margin-top:14px;cursor:pointer;">Guardar y enviar al PLC</button>
+          </div>
+        </div>
+        <!-- Registros Modbus -->
+        <div>
+          <p style="color:#94a3b8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Registros Modbus — Lectura</p>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Reg. Altura</span>
+              <input type="number" value="10001" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Reg. Sobrellenado</span>
+              <input type="number" value="10301" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Reg. Suiche</span>
+              <input type="number" value="6001" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+          </div>
+        </div>
+        <!-- Rango sensor -->
+        <div>
+          <p style="color:#94a3b8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Rango del Sensor de Nivel</p>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Valor mín. (mm)</span>
+              <input type="number" value="0" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Reg. Modbus mín.</span>
+              <input type="number" value="10101" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Valor máx. (mm)</span>
+              <input type="number" value="10000" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+            <label style="font-size:.75rem;"><span style="color:#94a3b8;display:block;margin-bottom:3px;">Reg. Modbus máx.</span>
+              <input type="number" value="10201" style="width:100%;background:#0f172a;border:1px solid #475569;color:white;padding:5px 8px;border-radius:4px;font-size:.75rem;"></label>
+          </div>
+          <button style="background:#b45309;color:white;border:none;padding:6px 14px;border-radius:5px;font-size:.75rem;font-weight:600;cursor:pointer;">Guardar y enviar al PLC</button>
+        </div>
+        <!-- Boton guardar -->
+        <button style="background:#1d4ed8;color:white;border:none;padding:8px 22px;border-radius:6px;font-size:.85rem;font-weight:600;align-self:flex-start;cursor:pointer;">Guardar configuración</button>
+      </div>
+    </div>
+
+    <!-- ── 7.1 Unidades ── -->
+    <h2>7.1 Unidades de Visualización</h2>
+    <p>Panel con <strong>borde índigo</strong> en la parte superior de la configuración. Cambia las unidades en <strong>todas las pantallas simultáneamente</strong>. La preferencia se guarda en el navegador.</p>
+    <table class="ref-table">
+      <thead><tr><th>Variable</th><th>Opciones</th><th>Por defecto</th></tr></thead>
+      <tbody>
+        <tr><td>Nivel / Altura</td><td>cm · m · mm</td><td>cm</td></tr>
+        <tr><td>Volumen</td><td>L (litros) · gal (galones US)</td><td>L</td></tr>
+        <tr><td>Peso</td><td>kg (fijo)</td><td>kg</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ── 7.2 Producto y densidad ── -->
+    <h2>7.2 Producto y Densidad</h2>
+    <p>Seleccione el tanque con el desplegable <strong>TK1–TK13</strong> en la parte superior. Luego edite:</p>
+    <ul>
+      <li><strong>Nombre del tanque</strong> — etiqueta visual que aparece en la Vista General.</li>
+      <li><strong>Producto</strong> — nombre del químico almacenado.</li>
+      <li><strong>Densidad (kg/L)</strong> — se usa para calcular el peso. Consulte la ficha técnica del producto.</li>
+    </ul>
+    <p>Pulse <button class="btn btn-blue" style="font-size:.8rem;padding:3px 12px;pointer-events:none;">Guardar configuración</button> para aplicar estos cambios.</p>
+
+    <!-- ── 7.3 Alarma sobrellenado ── -->
+    <h2>7.3 Alarma de Sobrellenado</h2>
+    <p>Define el nivel a partir del cual el tanque entra en alarma. Tiene dos modos:</p>
+    <table class="ref-table">
+      <thead><tr><th>Modo</th><th>Checkbox</th><th>Comportamiento</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Automático (PLC)</strong></td>
+          <td>☐ Desactivado</td>
+          <td>El sistema usa el valor del registro de sobrellenado del PLC (registro 10301+). Recomendado en operación normal.</td>
+        </tr>
+        <tr>
+          <td><strong>Manual (override)</strong></td>
+          <td>☑ Activado</td>
+          <td>El sistema usa el valor ingresado en el campo <em>Altura de alarma (mm)</em>, ignorando el PLC.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Cómo configurar el umbral manual</h3>
+    <ol class="steps">
+      <li><p>Marque el checkbox <strong>"Usar umbral personalizado"</strong>.</p></li>
+      <li><p>Ingrese la altura en <strong>milímetros</strong>. Ejemplo: para 9 metros ingrese <code style="background:#e2e8f0;padding:1px 6px;border-radius:3px;">9000</code>.</p></li>
+      <li><p>Haga clic en <button style="background:#c2410c;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:.8rem;font-weight:600;">Guardar y enviar al PLC</button> — guarda en la base de datos <strong>y</strong> escribe el valor al PLC en un solo paso.</p></li>
+      <li><p>El mensaje <span style="color:#22c55e;font-weight:600;">✓ Guardado y enviado al PLC</span> confirma el éxito.</p></li>
+    </ol>
+    <div class="callout callout-info">
+      <div class="callout-icon">💡</div>
+      <p>Para volver al modo automático, desmarque el checkbox y pulse <strong>Guardar y enviar al PLC</strong>. El sistema tomará nuevamente el valor del PLC.</p>
+    </div>
+
+    <!-- ── 7.4 Registros Modbus ── -->
+    <h2>7.4 Registros Modbus — Lectura</h2>
+    <p>Direcciones de los registros del PLC desde los cuales el sistema lee los datos de cada tanque. <strong>No modificar salvo indicación del integrador.</strong></p>
+    <table class="ref-table">
+      <thead><tr><th>Campo</th><th>Descripción</th><th>Valor típico TK1</th></tr></thead>
+      <tbody>
+        <tr><td>Reg. Altura</td><td>Holding register con el nivel actual del tanque (Float32, mm)</td><td>10001</td></tr>
+        <tr><td>Reg. Sobrellenado</td><td>Holding register con el límite de sobrellenado del PLC (Float32, mm)</td><td>10301</td></tr>
+        <tr><td>Reg. Suiche</td><td>Coil del suiche de nivel alto (Bool, FC01)</td><td>6001</td></tr>
+      </tbody>
+    </table>
+    <p>Pulse <button class="btn btn-blue" style="font-size:.8rem;padding:3px 12px;pointer-events:none;">Guardar configuración</button> para aplicar cambios en los registros.</p>
+
+    <!-- ── 7.5 Rango del sensor ── -->
+    <h2>7.5 Rango del Sensor de Nivel</h2>
+    <p>Define el rango de medición del sensor ultrasónico o de presión. El PLC usa estos valores para escalar la señal analógica.</p>
+    <table class="ref-table">
+      <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td>Valor mín. (mm)</td><td>Altura que corresponde al fondo del tanque (generalmente 0 mm)</td></tr>
+        <tr><td>Reg. Modbus mín.</td><td>Registro holding donde se escribe el mínimo al PLC</td></tr>
+        <tr><td>Valor máx. (mm)</td><td>Altura máxima del sensor (altura total del tanque en mm)</td></tr>
+        <tr><td>Reg. Modbus máx.</td><td>Registro holding donde se escribe el máximo al PLC</td></tr>
+      </tbody>
+    </table>
+    <ol class="steps">
+      <li><p>Ingrese los cuatro valores en <strong>milímetros</strong>.</p></li>
+      <li><p>Haga clic en <button style="background:#b45309;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:.8rem;font-weight:600;">Guardar y enviar al PLC</button> — escribe los valores a los registros correspondientes vía FC16.</p></li>
+    </ol>
+
+    <!-- ── 7.6 Tabla de Aforo ── -->
+    <h2>7.6 Tabla de Aforo (Calibración SGS)</h2>
+    <p>Tabla de calibración certificada que relaciona la <strong>altura del líquido</strong> con el <strong>volumen real</strong>. Cuando está cargada, el cálculo de volumen es más preciso que la fórmula cilíndrica.</p>
+
+    <div class="ui-mock" style="margin:12px 0;">
+      <div class="screen-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <span style="color:#94a3b8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Tabla de Aforo (Calibración SGS) <span style="color:#475569;font-weight:400;normal-case;">— 8 puntos</span></span>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-slate" style="font-size:.7rem;">+ Agregar fila</button>
+            <button style="background:#15803d;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:.7rem;font-weight:600;">Guardar cambios</button>
+          </div>
+        </div>
+        <input type="text" placeholder="Buscar por altura o volumen…" style="width:100%;background:#0f172a;border:1px solid #475569;color:#94a3b8;padding:4px 10px;border-radius:5px;font-size:.75rem;margin-bottom:8px;">
+        <div style="background:#0f172a;border:1px solid #334155;border-radius:6px;overflow:auto;max-height:180px;">
+          <table class="mock-table">
+            <thead><tr><th style="text-align:right;width:36px;">#</th><th style="text-align:right;">Altura (mm)</th><th style="text-align:right;">Volumen (L)</th><th style="width:100px;"></th></tr></thead>
+            <tbody>
+              <tr>
+                <td style="text-align:right;color:#475569;">1</td>
+                <td style="text-align:right;font-family:monospace;color:white;">0</td>
+                <td style="text-align:right;font-family:monospace;color:white;">417,570</td>
+                <td><div style="display:flex;gap:4px;justify-content:flex-end;"><span style="color:#60a5fa;font-size:.7rem;cursor:pointer;">Editar</span><span style="color:#f87171;font-size:.7rem;cursor:pointer;">Eliminar</span></div></td>
+              </tr>
+              <tr style="background:#334155;">
+                <td style="text-align:right;color:#475569;">2</td>
+                <td style="text-align:right;padding:2px 8px;"><input type="number" value="210" style="width:80px;background:#0f172a;border:1px solid #3b82f6;color:white;padding:2px 4px;border-radius:3px;font-size:.75rem;text-align:right;"></td>
+                <td style="text-align:right;padding:2px 8px;"><input type="number" value="1099.40" style="width:80px;background:#0f172a;border:1px solid #3b82f6;color:white;padding:2px 4px;border-radius:3px;font-size:.75rem;text-align:right;"></td>
+                <td><div style="display:flex;gap:4px;justify-content:flex-end;padding-right:4px;"><button style="background:#15803d;color:white;border:none;padding:2px 6px;border-radius:3px;font-size:.7rem;">✓</button><button style="background:#475569;color:white;border:none;padding:2px 6px;border-radius:3px;font-size:.7rem;">✕</button></div></td>
+              </tr>
+              <tr>
+                <td style="text-align:right;color:#475569;">3</td>
+                <td style="text-align:right;font-family:monospace;color:white;">260</td>
+                <td style="text-align:right;font-family:monospace;color:white;">2 042,720</td>
+                <td><div style="display:flex;gap:4px;justify-content:flex-end;"><span style="color:#60a5fa;font-size:.7rem;cursor:pointer;">Editar</span><span style="color:#f87171;font-size:.7rem;cursor:pointer;">Eliminar</span></div></td>
+              </tr>
+              <tr>
+                <td style="text-align:right;color:#475569;">4</td>
+                <td style="text-align:right;font-family:monospace;color:white;">…</td>
+                <td style="text-align:right;font-family:monospace;color:white;">…</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- CSV -->
+        <div style="border-top:1px solid #334155;padding-top:10px;margin-top:10px;">
+          <p style="color:#475569;font-size:.7rem;font-weight:600;margin-bottom:6px;">Reemplazar tabla completa desde CSV</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="color:#94a3b8;font-size:.75rem;background:#334155;padding:3px 10px;border-radius:4px;">tabla_tk1.csv</span>
+            <button style="background:#4338ca;color:white;border:none;padding:4px 12px;border-radius:4px;font-size:.75rem;font-weight:600;">Cargar CSV</button>
+          </div>
+          <p style="color:#475569;font-size:.7rem;margin-top:6px;">Formato: columnas <code style="background:#334155;padding:1px 4px;border-radius:2px;color:#e2e8f0;">height_mm</code> y <code style="background:#334155;padding:1px 4px;border-radius:2px;color:#e2e8f0;">volume_l</code>, alturas ascendentes.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Ver y editar la tabla manualmente</h3>
+    <ol class="steps">
+      <li><p>Use el campo de búsqueda para filtrar filas por altura o volumen.</p></li>
+      <li><p>Haga clic en <span style="color:#3b82f6;font-weight:600;">Editar</span> en la fila que desea modificar — los campos se vuelven editables (borde azul).</p></li>
+      <li><p>Modifique los valores y pulse <button style="background:#15803d;color:white;border:none;padding:2px 8px;border-radius:3px;font-size:.8rem;">✓</button> para confirmar, o <button style="background:#475569;color:white;border:none;padding:2px 8px;border-radius:3px;font-size:.8rem;">✕</button> para cancelar.</p></li>
+      <li><p>Para agregar un punto nuevo, pulse <strong>+ Agregar fila</strong> al final de la tabla.</p></li>
+      <li><p>Cuando aparezca el botón verde <strong>Guardar cambios</strong>, haga clic para persistir todos los cambios.</p></li>
+    </ol>
+    <div class="callout callout-danger">
+      <div class="callout-icon">🚫</div>
+      <p><strong>Las alturas deben estar en orden ascendente</strong> (de menor a mayor). Si una fila tiene una altura menor o igual a la anterior, el sistema mostrará un error y no guardará.</p>
+    </div>
+
+    <h3>Cargar tabla completa desde archivo CSV</h3>
+    <ol class="steps">
+      <li><p>Prepare el archivo CSV con dos columnas: <code style="background:#e2e8f0;padding:1px 6px;border-radius:3px;">height_mm</code> y <code style="background:#e2e8f0;padding:1px 6px;border-radius:3px;">volume_l</code>.</p></li>
+      <li><p>Ejemplo de formato:</p>
+        <pre style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:6px;font-size:.8rem;overflow:auto;">height_mm,volume_l
+0,417.57
+210,1099.40
+260,2042.72
+310,3128.72
+...</pre>
+      </li>
+      <li><p>En la sección <em>Reemplazar tabla completa desde CSV</em>, haga clic en el botón de selección de archivo y elija su CSV.</p></li>
+      <li><p>Haga clic en <button style="background:#4338ca;color:white;border:none;padding:3px 10px;border-radius:4px;font-size:.8rem;font-weight:600;">Cargar CSV</button>.</p></li>
+      <li><p>El mensaje <span style="color:#22c55e;font-weight:600;">✓ N puntos cargados correctamente</span> confirma la carga.</p></li>
+    </ol>
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <p><strong>Cargar un CSV reemplaza toda la tabla existente.</strong> Asegúrese de que el archivo corresponde al tanque correcto antes de confirmar.</p>
+    </div>
+    <p>Si no hay tabla cargada, el sistema calcula el volumen con la <strong>fórmula cilíndrica</strong> (menos precisa). Esto se indica con el mensaje en ámbar: <em>"Sin tabla — calculando volumen con fórmula cilíndrica"</em>.</p>
+
+    <!-- ── 7.7 Historial de cambios ── -->
+    <h2>7.7 Historial de Cambios (Auditoría)</h2>
+    <p>Al final de la pantalla se muestra el registro de las últimas 20 modificaciones realizadas al tanque seleccionado, con fecha, hora y qué campo fue modificado.</p>
+
+    <div class="ui-mock" style="margin:12px 0;">
+      <div class="screen-body" style="padding:14px 20px;">
+        <p style="color:#cbd5e1;font-size:.85rem;font-weight:600;margin-bottom:10px;">Historial de cambios</p>
+        <table class="mock-table">
+          <thead><tr><th>Fecha / Hora</th><th>Cambios</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-family:monospace;color:#cbd5e1;white-space:nowrap;">05/06/2026 09:15:32</td>
+              <td style="font-family:monospace;color:#cbd5e1;font-size:.7rem;">{"alarm_height": 9.0}</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;color:#cbd5e1;white-space:nowrap;">04/06/2026 14:22:10</td>
+              <td style="font-family:monospace;color:#cbd5e1;font-size:.7rem;">{"product": "Ácido Sulfúrico", "density": 1.84}</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;color:#cbd5e1;white-space:nowrap;">03/06/2026 08:05:44</td>
+              <td style="font-family:monospace;color:#cbd5e1;font-size:.7rem;">{"sensor_range": {"min_value": 0.0, "max_value": 10.0}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p>Este registro es de solo lectura y sirve para auditar quién cambió qué y cuándo. Los campos aparecen en su valor almacenado internamente (metros, no milímetros).</p>
+
+    <!-- Resumen de botones -->
+    <h2>Resumen de botones de la pantalla</h2>
+    <table class="ref-table">
+      <thead><tr><th>Botón</th><th>Color</th><th>Acción</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><button style="background:#1d4ed8;color:white;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;font-weight:600;pointer-events:none;">Guardar configuración</button></td>
+          <td>Azul</td>
+          <td>Guarda nombre, producto, densidad y registros Modbus en la base de datos</td>
+        </tr>
+        <tr>
+          <td><button style="background:#c2410c;color:white;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;font-weight:600;pointer-events:none;">Guardar y enviar al PLC</button></td>
+          <td>Naranja</td>
+          <td>Guarda el umbral de sobrellenado en BD <strong>y</strong> lo escribe al PLC (sección Alarma de Sobrellenado)</td>
+        </tr>
+        <tr>
+          <td><button style="background:#b45309;color:white;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;font-weight:600;pointer-events:none;">Guardar y enviar al PLC</button></td>
+          <td>Ámbar</td>
+          <td>Guarda el rango del sensor en BD <strong>y</strong> lo escribe al PLC (sección Rango del Sensor)</td>
+        </tr>
+        <tr>
+          <td><button style="background:#15803d;color:white;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;font-weight:600;pointer-events:none;">Guardar cambios</button></td>
+          <td>Verde</td>
+          <td>Guarda las modificaciones manuales de la tabla de aforo (aparece solo cuando hay cambios pendientes)</td>
+        </tr>
+        <tr>
+          <td><button style="background:#4338ca;color:white;border:none;padding:4px 12px;border-radius:4px;font-size:.8rem;font-weight:600;pointer-events:none;">Cargar CSV</button></td>
+          <td>Índigo</td>
+          <td>Reemplaza toda la tabla de aforo con el archivo CSV seleccionado</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══ 8. PROCEDIMIENTOS ══ -->
+  <div class="section" id="procedimientos">
+    <h1><span class="section-num">8</span>Procedimientos de operación</h1>
+
+    <h2>🔴 Ante una alarma de nivel (tanque)</h2>
+    <ol class="steps">
+      <li><p>El banner rojo aparece en la parte superior con el nombre del tanque en alarma.</p></li>
+      <li><p>Verifique el tanque afectado en la <strong>Vista General</strong> (borde rojo parpadeante) y haga clic para ver el detalle.</p></li>
+      <li><p>Informe al supervisor y tome las acciones físicas pertinentes (detener llenado, abrir válvula, etc.).</p></li>
+      <li><p>Vaya a <strong>Alarmas</strong>, haga clic en <strong>ACK</strong> para confirmar que tomó nota de la alarma.</p></li>
+      <li><p>Si hay alerta sonora en planta, use <strong>Silenciar (Reset PLC)</strong> para apagarla.</p></li>
+      <li><p>Una vez resuelto el problema físico, la alarma pasa automáticamente a <span class="badge badge-slate">FINALIZADA</span>.</p></li>
+    </ol>
+
+    <h2>🔵 Ante una Alarma DPS o Monitor de Fase</h2>
+    <ol class="steps">
+      <li><p>El banner rojo muestra <strong>"Alarma DPS"</strong> o <strong>"Alarma Monitor de Fase"</strong>.</p></li>
+      <li><p>Estas alarmas son independientes de los tanques y provienen del sistema eléctrico.</p></li>
+      <li><p>Notifique inmediatamente al supervisor eléctrico.</p></li>
+      <li><p>Puede reconocerlas (ACK) desde la pantalla de <strong>Alarmas</strong> — columna <strong>Sistema</strong>.</p></li>
+    </ol>
+
+    <h2>🟠 Indicador PLC sin señal</h2>
+    <ol class="steps">
+      <li><p>El indicador en la navbar muestra <span style="color:#f97316; font-weight:600;">⬤ PLC sin señal</span>.</p></li>
+      <li><p>Los valores de los tanques quedan congelados en el último dato recibido.</p></li>
+      <li><p>Notifique al supervisor de instrumentación. No tome decisiones basadas en los valores mostrados hasta que la conexión se restablezca.</p></li>
+      <li><p>El sistema intenta reconectarse automáticamente cada segundo.</p></li>
+    </ol>
+
+    <h2>🔴 Pantalla sin conexión (Sin conexión)</h2>
+    <ol class="steps">
+      <li><p>El indicador muestra <span style="color:#ef4444; font-weight:600;">⬤ Sin conexión</span> parpadeante.</p></li>
+      <li><p>Verifique que el cable de red del PC está conectado y que tiene acceso a la red local.</p></li>
+      <li><p>Intente recargar la página con <strong>F5</strong>.</p></li>
+      <li><p>Si persiste, notifique al supervisor de sistemas.</p></li>
+    </ol>
+
+    <div class="callout callout-success">
+      <div class="callout-icon">✅</div>
+      <p><strong>El sistema es resiliente:</strong> si pierde conexión momentáneamente, se reconecta automáticamente sin intervención del operario. No es necesario recargar la página manualmente.</p>
+    </div>
+  </div>
+
+  <!-- ══ 9. GLOSARIO ══ -->
+  <div class="section" id="glosario">
+    <h1><span class="section-num">9</span>Glosario</h1>
+    <dl class="glosario">
+      <dt>ACK (Reconocimiento)</dt>
+      <dd>Confirmación de que el operario tomó nota de una alarma. No resuelve la causa; solo registra que fue vista.</dd>
+
+      <dt>Alarma DPS</dt>
+      <dd>Señal de alarma proveniente del sistema de protección diferencial (DPS) del cuadro eléctrico. Se detecta vía Modbus desde el PLC.</dd>
+
+      <dt>Banner de alarma</dt>
+      <dd>Barra roja parpadeante que aparece en la parte superior de todas las pantallas cuando existe al menos una alarma activa.</dd>
+
+      <dt>Densidad</dt>
+      <dd>Propiedad del producto almacenado en kg/L. Se usa para calcular el peso: Peso = Volumen × Densidad.</dd>
+
+      <dt>FC01 / FC03 / FC05 / FC16</dt>
+      <dd>Códigos de función del protocolo Modbus: FC01 lee coils (digitales), FC03 lee registros holding (flotantes), FC05 escribe un coil, FC16 escribe registros.</dd>
+
+      <dt>Modbus TCP</dt>
+      <dd>Protocolo industrial de comunicación entre el servidor SCADA y el PLC a través de red Ethernet.</dd>
+
+      <dt>Monitor de Fase</dt>
+      <dd>Dispositivo que detecta desequilibrios o pérdidas de fase en la alimentación eléctrica trifásica. Su alarma se reporta vía Modbus.</dd>
+
+      <dt>PLC</dt>
+      <dd>Controlador Lógico Programable. Dispositivo industrial que lee los sensores de los tanques y envía los datos al sistema SCADA.</dd>
+
+      <dt>Reset PLC / Silenciar</dt>
+      <dd>Acción que envía una señal al PLC para desactivar la alarma sonora. El PLC se encarga de regresar el registro a su estado normal.</dd>
+
+      <dt>Suiche de nivel</dt>
+      <dd>Sensor digital (flotante o de contacto) que se activa cuando el líquido alcanza el nivel máximo físico del tanque.</dd>
+
+      <dt>Tabla de aforo</dt>
+      <dd>Tabla de calibración certificada que relaciona la altura del líquido con el volumen real, compensando la geometría no perfectamente cilíndrica del tanque.</dd>
+
+      <dt>WebSocket</dt>
+      <dd>Canal de comunicación permanente entre el navegador y el servidor que permite recibir datos en tiempo real sin recargar la página.</dd>
+    </dl>
+  </div>
+
+  <!-- Pie de página -->
+  <div style="text-align:center; color:#94a3b8; font-size:0.8rem; padding:32px 0 16px; border-top:1px solid #e2e8f0; margin-top:16px;">
+    <strong>SCADA Tanques — Brenntag Barranquilla</strong><br>
+    Manual de Operario v1.0 · Comtitronic SAS · 2026<br>
+    <span style="font-size:0.75rem;">Para soporte técnico contacte al supervisor de instrumentación</span>
+  </div>
+
+</div>
+</body>
+</html>
